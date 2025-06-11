@@ -1,5 +1,6 @@
 import Foundation
 
+// MARK: - Model
 struct Transaction {
     let id: Int
     let account: BankAccount
@@ -11,6 +12,7 @@ struct Transaction {
     let updatedAt: Date
 }
 
+// MARK: - JSON Parsing
 extension Transaction {
     static func parse(jsonObject: Any) -> Transaction? {
         let formatter = ISO8601DateFormatter()
@@ -31,6 +33,7 @@ extension Transaction {
             let createdAt = formatter.date(from: createdAtString),
             let updatedAt = formatter.date(from: updatedAtString)
         else {
+            print("[Transaction.parse]: Не удалось распарсить транзакцию")
             return nil
         }
 
@@ -67,6 +70,7 @@ extension Transaction {
     }
 }
 
+// MARK: - CSV
 extension Transaction {
     enum CSVIndexName: String {
         case id
@@ -91,11 +95,13 @@ extension Transaction {
 
     static func parseCSV(fromFileAtPath path: String) -> [Transaction]? {
         guard path.hasSuffix(".csv") else {
+            print("[Transaction.parseCSV] - путь не оканчивается на .csv")
             return nil
         }
 
         guard let data = FileManager.default.contents(atPath: path),
               let content = String(data: data, encoding: .utf8) else {
+            print("[Transaction.parseCSV] - не удалось загрузить данные из файла по пути: \(path)")
             return nil
         }
 
@@ -105,7 +111,10 @@ extension Transaction {
 
     static func parseCSV(_ csv: String) -> [Transaction]? {
         let lines = csv.components(separatedBy: .newlines).filter { !$0.isEmpty }
-        guard lines.count > 1 else { return nil }
+        guard lines.count > 1 else {
+            print("[Transaction.parseCSV]: Файл не содержит данных")
+            return nil
+        }
 
         let header = lines[0].components(separatedBy: ",")
         let headerIndexMap = Dictionary(uniqueKeysWithValues: header.enumerated().map { ($1, $0) })
@@ -179,7 +188,9 @@ extension Transaction {
             )
             transactions.append(transaction)
         }
+        
         if transactions.isEmpty {
+            print("[Transaction.parseCSV]: Не удалось распарсить ни одной транзакции")
             return nil
         }
         return transactions

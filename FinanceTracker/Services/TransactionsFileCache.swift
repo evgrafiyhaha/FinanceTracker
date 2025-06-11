@@ -1,13 +1,17 @@
 import Foundation
 
 final class TransactionsFileCache {
+
+    // MARK: - Private Properties
     private(set) var transactions: [Transaction] = []
     private let fileURL: URL?
 
+    // MARK: - init
     init(fileName: String) {
         let fileManager = FileManager.default
         guard let directory = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first
         else {
+            print("[TransactionsFileCache.init] - Не удалось получить директорию документов")
             self.fileURL = nil
             return
         }
@@ -22,11 +26,12 @@ final class TransactionsFileCache {
         }
     }
 
+    // MARK: - Public Methods
     func add(_ transaction: Transaction) {
         guard
             !transactions.contains(where: {transaction.id == $0.id})
         else {
-            print("Ошибка создания транзакции: такая транзакция уже существует")
+            print("[TransactionsFileCache.add] - Транзакция с id \(transaction.id) уже существует")
             return
         }
         transactions.append(transaction)
@@ -39,7 +44,10 @@ final class TransactionsFileCache {
     }
 
     func save() {
-        guard let fileURL else { return }
+        guard let fileURL else {
+            print("[TransactionsFileCache.save] - fileURL отсутствует")
+            return
+        }
 
         let jsonObjects = transactions.map { $0.jsonObject }
 
@@ -47,22 +55,28 @@ final class TransactionsFileCache {
             let data = try JSONSerialization.data(withJSONObject: jsonObjects, options: [.prettyPrinted])
             try data.write(to: fileURL)
         } catch {
-            print("Ошибка при сохранении: \(error)")
+            print("[TransactionsFileCache.save] - Ошибка при сохранении: \(error)")
         }
     }
 
     func load() {
-        guard let fileURL else { return }
+        guard let fileURL else {
+            print("[TransactionsFileCache.load] - fileURL отсутствует")
+            return
+        }
 
         do {
             let data = try Data(contentsOf: fileURL)
             let rawJson = try JSONSerialization.jsonObject(with: data, options: [])
 
-            guard let jsonArray = rawJson as? [[String : Any]] else { return }
+            guard let jsonArray = rawJson as? [[String : Any]] else {
+                print("[TransactionsFileCache.load] - Данные не являются массивом JSON-объектов")
+                return
+            }
 
             transactions = jsonArray.compactMap { Transaction.parse(jsonObject: $0) }
         } catch {
-            print("Ошибка при загрузке: \(error)")
+            print("[TransactionsFileCache.load] - Ошибка при загрузке: \(error)")
         }
     }
 }

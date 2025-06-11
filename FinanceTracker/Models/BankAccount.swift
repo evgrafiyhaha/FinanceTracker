@@ -1,5 +1,6 @@
 import Foundation
 
+// MARK: - Model
 struct BankAccount {
     let id: Int
     let userId: Int?
@@ -10,6 +11,7 @@ struct BankAccount {
     let updatedAt: Date?
 }
 
+// MARK: - JSON
 extension BankAccount {
     static func parse(jsonObject: Any) -> BankAccount? {
         guard
@@ -21,6 +23,7 @@ extension BankAccount {
             let rawCurrency = dict["currency"] as? String,
             let currency = Currency(rawValue: rawCurrency)
         else {
+            print("[BankAccount.parse]: Не удалось распарсить аккаунт")
             return nil
         }
 

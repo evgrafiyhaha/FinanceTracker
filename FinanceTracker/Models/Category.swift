@@ -1,10 +1,11 @@
+// MARK: - Model
 struct Category {
     let id: Int
     let name: String
     let emoji: Character
     let direction: Direction
 }
-
+// MARK: - JSON
 extension Category {
     static func parse(jsonObject: Any) -> Category? {
         guard
@@ -14,7 +15,10 @@ extension Category {
             let emojiString = dict["emoji"] as? String,
             let emoji = emojiString.first,
             let isIncome = dict["isIncome"] as? Bool
-        else { return nil }
+        else {
+            print("[Category.parse]: Не удалось распарсить категорию")
+            return nil
+        }
 
         let direction: Direction = isIncome ? .income : .outcome
         return Category(id: id, name: name, emoji: emoji, direction: direction)

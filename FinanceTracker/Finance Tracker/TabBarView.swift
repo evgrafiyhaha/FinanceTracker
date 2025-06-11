@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct TabBarView: View {
+
+    // MARK: - Body
     var body: some View {
         TabView {
             ExpensesView()
@@ -34,9 +36,11 @@ struct TabBarView: View {
                 }
         }
         .accentColor(.customGreen)
-        
+
     }
 }
+
+// MARK: - Preview
 
 #Preview {
     TabBarView()
