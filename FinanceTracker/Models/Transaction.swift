@@ -13,6 +13,8 @@ struct Transaction {
 
 extension Transaction {
     static func parse(jsonObject: Any) -> Transaction? {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         guard
             let dict = jsonObject as? [String: Any],
             let id = dict["id"] as? Int,
@@ -25,9 +27,9 @@ extension Transaction {
             let transactionDateString = dict["transactionDate"] as? String,
             let createdAtString = dict["createdAt"] as? String,
             let updatedAtString = dict["updatedAt"] as? String,
-            let transactionDate = ISO8601DateFormatter().date(from: transactionDateString),
-            let createdAt = ISO8601DateFormatter().date(from: createdAtString),
-            let updatedAt = ISO8601DateFormatter().date(from: updatedAtString)
+            let transactionDate = formatter.date(from: transactionDateString),
+            let createdAt = formatter.date(from: createdAtString),
+            let updatedAt = formatter.date(from: updatedAtString)
         else {
             return nil
         }
@@ -48,6 +50,7 @@ extension Transaction {
 
     var jsonObject: Any {
         let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         var dict: [String: Any] = [
             "id": id,
             "account": account.jsonObject,
@@ -108,6 +111,7 @@ extension Transaction {
         let headerIndexMap = Dictionary(uniqueKeysWithValues: header.enumerated().map { ($1, $0) })
         var transactions: [Transaction] = []
         let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
 
         for line in lines[1...] {
             let parsedLine = line.components(separatedBy: ",")
@@ -174,6 +178,9 @@ extension Transaction {
                 updatedAt: updatedAt
             )
             transactions.append(transaction)
+        }
+        if transactions.isEmpty {
+            return nil
         }
         return transactions
     }

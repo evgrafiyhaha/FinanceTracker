@@ -24,18 +24,20 @@ extension BankAccount {
             return nil
         }
 
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         let userId = dict["userId"] as? Int
 
         let createdAt: Date?
         if let createdAtString = dict["createdAt"] as? String {
-            createdAt = ISO8601DateFormatter().date(from: createdAtString)
+            createdAt = formatter.date(from: createdAtString)
         } else {
             createdAt = nil
         }
 
         let updatedAt: Date?
         if let updatedAtString = dict["updatedAt"] as? String {
-            updatedAt = ISO8601DateFormatter().date(from: updatedAtString)
+            updatedAt = formatter.date(from: updatedAtString)
         } else {
             updatedAt = nil
         }
@@ -53,10 +55,11 @@ extension BankAccount {
 
     var jsonObject: Any {
         let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         var dict: [String: Any] = [
             "id": id,
             "name": name,
-            "balance": "\(balance)",
+            "balance": String(format: "%.2f", NSDecimalNumber(decimal: balance).doubleValue),
             "currency": currency.rawValue
         ]
 
