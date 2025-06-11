@@ -64,3 +64,117 @@ extension Transaction {
     }
 }
 
+extension Transaction {
+    enum CSVIndexName: String {
+        case id
+        case accountId
+        case accountName
+        case accountBalance
+        case accountCurrency
+        case categoryId
+        case categoryName
+        case categoryEmoji
+        case isIncome
+        case amount
+        case transactionDate
+        case comment
+        case createdAt
+        case updatedAt
+    }
+
+    static func index(from dict: [String: Int], for key: CSVIndexName) -> Int? {
+        return dict[key.rawValue]
+    }
+
+    static func parseCSV(fromFileAtPath path: String) -> [Transaction]? {
+        guard path.hasSuffix(".csv") else {
+            return nil
+        }
+
+        guard let data = FileManager.default.contents(atPath: path),
+              let content = String(data: data, encoding: .utf8) else {
+            return nil
+        }
+
+        return parseCSV(content)
+    }
+
+
+    static func parseCSV(_ csv: String) -> [Transaction]? {
+        let lines = csv.components(separatedBy: .newlines).filter { !$0.isEmpty }
+        guard lines.count > 1 else { return nil }
+
+        let header = lines[0].components(separatedBy: ",")
+        let headerIndexMap = Dictionary(uniqueKeysWithValues: header.enumerated().map { ($1, $0) })
+        var transactions: [Transaction] = []
+        let formatter = ISO8601DateFormatter()
+
+        for line in lines[1...] {
+            let parsedLine = line.components(separatedBy: ",")
+            guard
+                parsedLine.count == header.count,
+
+                let idIndex = index(from: headerIndexMap, for: .id),
+                let id = Int(parsedLine[idIndex]),
+
+                let accountIdIndex = index(from: headerIndexMap, for: .accountId),
+                let accountId = Int(parsedLine[accountIdIndex]),
+                let accountNameIndex = index(from: headerIndexMap, for: .accountName),
+                let accountBalanceIndex = index(from: headerIndexMap, for: .accountBalance),
+                let accountBalance = Decimal(string: parsedLine[accountBalanceIndex]),
+                let accountCurrencyIndex = index(from: headerIndexMap, for: .accountCurrency),
+                let accountCurrency = Currency(rawValue: parsedLine[accountCurrencyIndex]),
+
+                let categoryIdIndex = index(from: headerIndexMap, for: .categoryId),
+                let categoryId = Int(parsedLine[categoryIdIndex]),
+                let categoryNameIndex = index(from: headerIndexMap, for: .categoryName),
+                let categoryEmojiIndex = index(from: headerIndexMap, for: .categoryEmoji),
+                let isIncomeIndex = index(from: headerIndexMap, for: .isIncome),
+                let isIncome = Bool(parsedLine[isIncomeIndex]),
+
+                let amountIndex = index(from: headerIndexMap, for: .amount),
+                let amount = Decimal(string: parsedLine[amountIndex]),
+                let transactionDateIndex = index(from: headerIndexMap, for: .transactionDate),
+                let transactionDate = formatter.date(from: parsedLine[transactionDateIndex]),
+                let commentIndex = index(from: headerIndexMap, for: .comment),
+                let createdAtIndex = index(from: headerIndexMap, for: .createdAt),
+                let createdAt = formatter.date(from: parsedLine[createdAtIndex]),
+                let updatedAtIndex = index(from: headerIndexMap, for: .updatedAt),
+                let updatedAt = formatter.date(from: parsedLine[updatedAtIndex])
+            else { continue }
+            let accountName = parsedLine[accountNameIndex]
+            let categoryName = parsedLine[categoryNameIndex]
+            let categoryEmoji = Character(parsedLine[categoryEmojiIndex])
+            let categoryDirection: Direction = isIncome ? .income : .outcome
+            let comment = parsedLine[commentIndex].isEmpty ? nil : parsedLine[commentIndex]
+
+            let account = BankAccount(
+                id: accountId,
+                userId: id,
+                name: accountName,
+                balance: accountBalance,
+                currency: accountCurrency,
+                createdAt: nil,
+                updatedAt: nil
+            )
+            let category = Category(
+                id: categoryId,
+                name: categoryName,
+                emoji: categoryEmoji,
+                direction: categoryDirection
+            )
+            let transaction = Transaction(
+                id: id,
+                account: account,
+                category: category,
+                amount: amount,
+                transactionDate: transactionDate,
+                comment: comment,
+                createdAt: createdAt,
+                updatedAt: updatedAt
+            )
+            transactions.append(transaction)
+        }
+        return transactions
+    }
+}
