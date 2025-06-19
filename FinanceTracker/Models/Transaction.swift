@@ -62,10 +62,8 @@ extension Transaction {
             "transactionDate": formatter.string(from: transactionDate),
             "createdAt": formatter.string(from: createdAt),
             "updatedAt": formatter.string(from: updatedAt),
+            "comment": comment ?? NSNull()
         ]
-        if let comment {
-            dict["comment"] = comment
-        }
         return dict
     }
 }

@@ -21,6 +21,14 @@ final class BankAccountsService {
         return first
     }
 
+    func update(with account: BankAccount) async throws {
+        guard allAccounts.count > 0 else {
+            print("[BankAccountsService.updateBalance] - Не удалось найти банковский счёт для обновления")
+            throw BankAccountsServiceError.notFound
+        }
+        allAccounts[0] = account
+    }
+
     func updateBalance(withValue value: Decimal) async throws {
         guard let first = allAccounts.first else {
             print("[BankAccountsService.updateBalance] - Не удалось найти банковский счёт для обновления")
