@@ -21,7 +21,6 @@ struct TransactionHistoryView: View {
                             Spacer()
                             DatePicker("", selection: $viewModel.startDate, displayedComponents: .date)
                                 .labelsHidden()
-                                .tint(.ftGreen)
                                 .background(.ftLightGreen)
                         }
                         HStack {
@@ -29,7 +28,6 @@ struct TransactionHistoryView: View {
                             Spacer()
                             DatePicker("", selection: $viewModel.endDate, displayedComponents: .date)
                                 .labelsHidden()
-                                .tint(.ftGreen)
                                 .background(.ftLightGreen)
                         }
                         HStack {
@@ -44,7 +42,7 @@ struct TransactionHistoryView: View {
                                 }
                             } label: {
                                 Text(viewModel.sortingType.name)
-                                    .foregroundStyle(.ftGreen)
+                                    .foregroundStyle(Color.accentColor)
                             }
                         }
                         HStack {

@@ -34,7 +34,6 @@ struct TabBarView: View {
                     Text("Настройки")
                 }
         }
-        .accentColor(.ftGreen)
 
     }
 }

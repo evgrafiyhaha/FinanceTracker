@@ -34,7 +34,7 @@ struct TransactionsListView: View {
                         .frame(width: 16,height: 16)
                         .padding(22)
                         .foregroundStyle(.white)
-                        .background(Color.ftGreen)
+                        .background(Color.accentColor)
                         .clipShape(Circle())
                 }
                 .padding(.trailing, 16)
