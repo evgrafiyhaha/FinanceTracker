@@ -54,7 +54,7 @@ extension Transaction {
     var jsonObject: Any {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        var dict: [String: Any] = [
+        let dict: [String: Any] = [
             "id": id,
             "account": account.jsonObject,
             "category": category.jsonObject,
