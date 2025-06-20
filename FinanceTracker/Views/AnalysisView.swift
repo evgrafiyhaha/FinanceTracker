@@ -1,14 +1,15 @@
 import SwiftUI
 
-struct SettingsView: View {
+struct AnalysisView: View {
 
     var body: some View {
-        Text("SettingsView!")
+        Text("AnalysisView!")
     }
 }
 
 // MARK: - Preview
 
 #Preview {
-    SettingsView()
+    AnalysisView()
 }
+

@@ -4,13 +4,13 @@ struct TabBarView: View {
 
     var body: some View {
         TabView {
-            ExpensesView()
+            TransactionsListView(direction: .outcome)
                 .tabItem {
                     Image("downtrend").renderingMode(.template)
                     Text("Расходы")
                 }
 
-            IncomeView()
+            TransactionsListView(direction: .income)
                 .tabItem {
                     Image("uptrend").renderingMode(.template)
                     Text("Доходы")
@@ -34,7 +34,6 @@ struct TabBarView: View {
                     Text("Настройки")
                 }
         }
-        .accentColor(.ftGreen)
 
     }
 }
