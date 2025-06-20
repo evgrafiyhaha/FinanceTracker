@@ -54,7 +54,10 @@ struct TransactionHistoryView: View {
                     Section(header: Text("Операции")) {
                         ForEach(viewModel.transactions, id: \.id) { transaction in
                             NavigationLink(destination: TransactionEditView()) {
-                                TransactionCell(transaction: transaction)
+                                TransactionCell(
+                                    transaction: transaction,
+                                    context: .history
+                                )
                                     .padding(4)
                             }
                         }

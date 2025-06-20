@@ -23,7 +23,10 @@ struct TransactionsListView: View {
                     Section(header: Text("Операции")) {
                         ForEach(viewModel.transactions, id: \.id) { transaction in
                             NavigationLink(destination: TransactionEditView()) {
-                                TransactionCell(transaction: transaction)
+                                TransactionCell(
+                                    transaction: transaction,
+                                    context: .today
+                                )
                             }
                         }
                     }
@@ -58,32 +61,6 @@ struct TransactionsListView: View {
     }
 }
 
-struct TransactionCell: View {
-    var transaction: Transaction
-    var body: some View {
-        HStack {
-            Text(String(transaction.category.emoji))
-                .font(.system(size: 14.5))
-                .padding(4)
-                .background(.ftLightGreen)
-                .clipShape(Circle())
-            VStack(alignment: .leading) {
-                Text(transaction.category.name)
-                    .font(.system(size: 17, weight: .regular))
-                if let comment = transaction.comment, !comment.isEmpty {
-                    Text(comment)
-                        .font(.system(size: 13, weight: .regular))
-                        .foregroundStyle(.secondary)
-                }
-            }
-            Spacer()
-            Text("\(transaction.amount.formatted()) \(transaction.account.currency.symbol)")
-                .padding(5)
-            
-            
-        }
-    }
-}
 // MARK: - Preview
 
 #Preview {
