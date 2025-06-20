@@ -20,10 +20,7 @@ enum SortingType {
 
 class TransactionHistoryViewModel: ObservableObject {
 
-    private let direction: Direction
-    private let transactionsService = TransactionsService()
-    private let accountService = BankAccountsService()
-
+    // MARK: - @Published
     @Published var transactions: [Transaction] = []
     @Published var sortingType: SortingType = .none
     @Published var sum: Decimal = 0
@@ -43,10 +40,17 @@ class TransactionHistoryViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Private Properties
+    private let direction: Direction
+    private let transactionsService = TransactionsService()
+    private let accountService = BankAccountsService()
+
+    // MARK: - init
     init(direction: Direction) {
         self.direction = direction
     }
 
+    // MARK: - Public Methods
     func fetchTransactions() async {
         let calendar = Calendar.current
         let startOfDay = calendar.startOfDay(for: startDate)
@@ -94,6 +98,7 @@ class TransactionHistoryViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Private Methods
     private func recalculateSum() {
         sum = transactions.reduce(0) { $0 + $1.amount }
     }

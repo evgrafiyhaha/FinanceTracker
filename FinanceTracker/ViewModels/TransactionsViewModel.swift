@@ -4,19 +4,22 @@ import Combine
 
 class TransactionsViewModel: ObservableObject {
     
+    // MARK: - @Published
+    @Published var transactions: [Transaction] = []
+    @Published var sum: Decimal = 0
+    @Published var bankAccount: BankAccount?
+    
+    // MARK: - Private Properties
     private let direction: Direction
     private let transactionsService = TransactionsService()
     private let accountService = BankAccountsService()
-
-    @Published var transactions: [Transaction] = []
-
-    @Published var sum: Decimal = 0
-    @Published var bankAccount: BankAccount?
-
+    
+    // MARK: - init
     init(direction: Direction) {
         self.direction = direction
     }
-
+    
+    // MARK: - Public Methods
     func fetchTodayTransactions() async {
         let calendar = Calendar.current
         let now = Date()
@@ -24,11 +27,11 @@ class TransactionsViewModel: ObservableObject {
         guard let endOfDay = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: now) else {
             return
         }
-
+        
         do {
             let all = try await transactionsService.transactions(from: startOfDay, to: endOfDay)
             let filtered = all.filter { $0.category.direction == direction }
-
+            
             await MainActor.run {
                 self.transactions = filtered
                 self.recalculateSum()
@@ -37,7 +40,7 @@ class TransactionsViewModel: ObservableObject {
             print("[TransactionsViewModel.fetchTodayTransactions] - Ошибка загрузки транзакций: \(error)")
         }
     }
-
+    
     func load() {
         Task {
             await fetchTodayTransactions()
@@ -53,7 +56,8 @@ class TransactionsViewModel: ObservableObject {
             }
         }
     }
-
+    
+    // MARK: - Private Methods
     private func recalculateSum() {
         sum = transactions.reduce(0) { $0 + $1.amount }
     }

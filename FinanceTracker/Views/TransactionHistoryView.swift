@@ -12,83 +12,90 @@ struct TransactionHistoryView: View {
     }
 
     var body: some View {
-        VStack {
-            List {
-                Section {
-                    HStack {
-                        Text("Начало")
-                        Spacer()
-                        DatePicker("", selection: $viewModel.startDate, displayedComponents: .date)
-                            .labelsHidden()
-                            .tint(.ftGreen)
-                            .background(.ftLightGreen)
-                    }
-                    HStack {
-                        Text("Конец")
-                        Spacer()
-                        DatePicker("", selection: $viewModel.endDate, displayedComponents: .date)
-                            .labelsHidden()
-                            .tint(.ftGreen)
-                            .background(.ftLightGreen)
-                    }
-                    HStack {
-                        Text("Сортировка")
-                        Spacer()
-                        Menu {
-                            Button(action: { viewModel.sortingType = .date }) {
-                                Text(SortingType.date.name)
+        NavigationStack {
+            VStack {
+                List {
+                    Section {
+                        HStack {
+                            Text("Начало")
+                            Spacer()
+                            DatePicker("", selection: $viewModel.startDate, displayedComponents: .date)
+                                .labelsHidden()
+                                .tint(.ftGreen)
+                                .background(.ftLightGreen)
+                        }
+                        HStack {
+                            Text("Конец")
+                            Spacer()
+                            DatePicker("", selection: $viewModel.endDate, displayedComponents: .date)
+                                .labelsHidden()
+                                .tint(.ftGreen)
+                                .background(.ftLightGreen)
+                        }
+                        HStack {
+                            Text("Сортировка")
+                            Spacer()
+                            Menu {
+                                Button(action: { viewModel.sortingType = .date }) {
+                                    Text(SortingType.date.name)
+                                }
+                                Button(action: { viewModel.sortingType = .amount }) {
+                                    Text(SortingType.amount.name)
+                                }
+                            } label: {
+                                Text(viewModel.sortingType.name)
+                                    .foregroundStyle(.ftGreen)
                             }
-                            Button(action: { viewModel.sortingType = .amount }) {
-                                Text(SortingType.amount.name)
-                            }
-                        } label: {
-                            Text(viewModel.sortingType.name)
-                                .foregroundStyle(.ftGreen)
+                        }
+                        HStack {
+                            Text("Сумма")
+                            Spacer()
+                            Text("\(viewModel.sum.formatted()) \(viewModel.bankAccount?.currency.symbol ?? "")")
                         }
                     }
-                    HStack {
-                        Text("Сумма")
-                        Spacer()
-                        Text("\(viewModel.sum.formatted()) \(viewModel.bankAccount?.currency.symbol ?? "")")
+                    Section(header: Text("Операции")) {
+                        ForEach(viewModel.transactions, id: \.id) { transaction in
+                            NavigationLink(destination: TransactionEditView()) {
+                                TransactionCell(transaction: transaction)
+                                    .padding(4)
+                            }
+                        }
                     }
-                }
-                Section(header: Text("Операции")) {
-                    ForEach(viewModel.transactions, id: \.id) { transaction in
-                        TransactionCell(transaction: transaction)
-                            .padding(4)
-                    }
-                }
 
-            }
-
-        }
-        .navigationTitle("Моя История")
-        .navigationBarBackButtonHidden(true)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button(action: {
-                    dismiss()
-                }) {
-                    HStack {
-                        Image(systemName: "chevron.backward")
-                        Text("Назад")
-                    }
-                    .foregroundStyle(.ftPurple)
                 }
             }
-            ToolbarItem(placement: .navigationBarTrailing) {
-                NavigationLink(destination: Text("")) {
-                    Image(systemName: "document")
+            .navigationTitle("Моя История")
+            .navigationBarBackButtonHidden(true)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: {
+                        dismiss()
+                    }) {
+                        HStack {
+                            Image(systemName: "chevron.backward")
+                            Text("Назад")
+                        }
                         .foregroundStyle(.ftPurple)
+                    }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    NavigationLink(destination: AnalysisView()) {
+                        Image(systemName: "document")
+                            .foregroundStyle(.ftPurple)
+                    }
                 }
             }
-        }.onAppear {
+        }
+        .onAppear {
             viewModel.load()
-        }.onChange(of: viewModel.startDate) {
+        }
+        .onChange(of: viewModel.startDate) {
             Task { await viewModel.fetchTransactions() }
-        }.onChange(of: viewModel.endDate) {
+        }
+        .onChange(of: viewModel.endDate) {
             Task { await viewModel.fetchTransactions() }
-        }.onChange(of: viewModel.sortingType) {
+        }
+        .onChange(of: viewModel.sortingType) {
             viewModel.applySort()
         }
     }

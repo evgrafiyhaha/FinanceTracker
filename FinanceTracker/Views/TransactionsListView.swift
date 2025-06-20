@@ -3,11 +3,11 @@ import SwiftUI
 struct TransactionsListView: View {
     var direction: Direction
     @StateObject var viewModel:TransactionsViewModel
-
+    
     init(direction: Direction) {
-            self.direction = direction
-            _viewModel = StateObject(wrappedValue: TransactionsViewModel(direction: direction))
-        }
+        self.direction = direction
+        _viewModel = StateObject(wrappedValue: TransactionsViewModel(direction: direction))
+    }
     
     var body: some View {
         NavigationStack {
@@ -22,15 +22,13 @@ struct TransactionsListView: View {
                     }
                     Section(header: Text("Операции")) {
                         ForEach(viewModel.transactions, id: \.id) { transaction in
-                            TransactionCell(transaction: transaction)
+                            NavigationLink(destination: TransactionEditView()) {
+                                TransactionCell(transaction: transaction)
+                            }
                         }
                     }
                 }
-                Button (
-                action: {
-
-                    },
-                label: {
+                NavigationLink(destination: TransactionEditView()) {
                     Image(systemName: "plus")
                         .resizable()
                         .frame(width: 16,height: 16)
@@ -39,11 +37,12 @@ struct TransactionsListView: View {
                         .background(Color.ftGreen)
                         .clipShape(Circle())
                 }
-                )
                 .padding(.trailing, 16)
                 .padding(.bottom, 16)
             }
-            .navigationBarTitle(direction == .income ? "Доходы сегодня" :"Расходы сегодня")
+            .navigationBarTitle(
+                direction == .income ? "Доходы сегодня" : "Расходы сегодня"
+            )
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     NavigationLink(destination: TransactionHistoryView(direction: direction)) {
@@ -80,9 +79,8 @@ struct TransactionCell: View {
             Spacer()
             Text("\(transaction.amount.formatted()) \(transaction.account.currency.symbol)")
                 .padding(5)
-            Image("drill-in")
-
-
+            
+            
         }
     }
 }
