@@ -1,16 +1,14 @@
 import Foundation
 import Combine
 
+
 class TransactionsViewModel: ObservableObject {
-    let direction: Direction
+    
+    private let direction: Direction
     private let transactionsService = TransactionsService()
     private let accountService = BankAccountsService()
 
-    @Published var transactions: [Transaction] = [] {
-        didSet {
-            recalculateSum()
-        }
-    }
+    @Published var transactions: [Transaction] = []
 
     @Published var sum: Decimal = 0
     @Published var bankAccount: BankAccount?
@@ -33,6 +31,7 @@ class TransactionsViewModel: ObservableObject {
 
             await MainActor.run {
                 self.transactions = filtered
+                self.recalculateSum()
             }
         } catch {
             print("[TransactionsViewModel.fetchTodayTransactions] - Ошибка загрузки транзакций: \(error)")
@@ -46,6 +45,7 @@ class TransactionsViewModel: ObservableObject {
                 let account = try await accountService.bankAccount()
                 await MainActor.run {
                     self.bankAccount = account
+                    self.recalculateSum()
                 }
             }
             catch {

@@ -32,6 +32,21 @@ struct TransactionHistoryView: View {
                             .background(.ftLightGreen)
                     }
                     HStack {
+                        Text("Сортировка")
+                        Spacer()
+                        Menu {
+                            Button(action: { viewModel.sortingType = .date }) {
+                                Text(SortingType.date.name)
+                            }
+                            Button(action: { viewModel.sortingType = .amount }) {
+                                Text(SortingType.amount.name)
+                            }
+                        } label: {
+                            Text(viewModel.sortingType.name)
+                                .foregroundStyle(.ftGreen)
+                        }
+                    }
+                    HStack {
                         Text("Сумма")
                         Spacer()
                         Text("\(viewModel.sum.formatted()) \(viewModel.bankAccount?.currency.symbol ?? "")")
@@ -73,6 +88,8 @@ struct TransactionHistoryView: View {
             Task { await viewModel.fetchTransactions() }
         }.onChange(of: viewModel.endDate) {
             Task { await viewModel.fetchTransactions() }
+        }.onChange(of: viewModel.sortingType) {
+            viewModel.applySort()
         }
     }
 }

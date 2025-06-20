@@ -75,8 +75,6 @@ struct TransactionCell: View {
                     Text(comment)
                         .font(.system(size: 13, weight: .regular))
                         .foregroundStyle(.secondary)
-                } else {
-                    /*@START_MENU_TOKEN@*/EmptyView()/*@END_MENU_TOKEN@*/
                 }
             }
             Spacer()

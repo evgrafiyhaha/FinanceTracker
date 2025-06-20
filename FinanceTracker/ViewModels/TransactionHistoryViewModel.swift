@@ -1,13 +1,31 @@
 import Foundation
 import Combine
 
+enum SortingType {
+    case date
+    case amount
+    case none
+
+    var name: String {
+        switch self {
+        case .date:
+            return "По дате"
+        case .amount:
+            return "По сумме"
+        case .none:
+            return "Не выбрана"
+        }
+    }
+}
+
 class TransactionHistoryViewModel: ObservableObject {
-    let direction: Direction
+
+    private let direction: Direction
     private let transactionsService = TransactionsService()
     private let accountService = BankAccountsService()
 
     @Published var transactions: [Transaction] = []
-
+    @Published var sortingType: SortingType = .none
     @Published var sum: Decimal = 0
     @Published var bankAccount: BankAccount?
     @Published var startDate: Date = Calendar.current.date(byAdding: .month, value: -1, to: Date()) ?? Date() {
@@ -41,10 +59,11 @@ class TransactionHistoryViewModel: ObservableObject {
 
             await MainActor.run {
                 self.transactions = filtered
+                self.applySort()
                 self.recalculateSum()
             }
         } catch {
-            print("[TransactionsViewModel.fetchTransactions] - Ошибка загрузки транзакций: \(error)")
+            print("[TransactionHistoryViewModel.fetchTransactions] - Ошибка загрузки транзакций: \(error)")
         }
     }
 
@@ -59,8 +78,19 @@ class TransactionHistoryViewModel: ObservableObject {
                 }
             }
             catch {
-                print("[TransactionsViewModel.load] - Ошибка загрузки счета: \(error)")
+                print("[TransactionHistoryViewModel.load] - Ошибка загрузки счета: \(error)")
             }
+        }
+    }
+
+    func applySort() {
+        switch sortingType {
+        case .date:
+            transactions.sort { $0.transactionDate > $1.transactionDate }
+        case .amount:
+            transactions.sort { $0.amount > $1.amount }
+        case .none:
+            return
         }
     }
 
