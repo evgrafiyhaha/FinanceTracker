@@ -55,9 +55,7 @@ struct TransactionsListView: View {
                 }
             }
         }
-        .onAppear {
-            viewModel.load()
-        }
+        .task { await viewModel.load() }
     }
 }
 

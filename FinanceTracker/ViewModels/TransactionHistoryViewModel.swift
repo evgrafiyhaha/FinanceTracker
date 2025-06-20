@@ -18,13 +18,14 @@ enum SortingType {
     }
 }
 
-class TransactionHistoryViewModel: ObservableObject {
+final class TransactionHistoryViewModel: ObservableObject {
 
     // MARK: - @Published
-    @Published var transactions: [Transaction] = []
+    @Published private(set) var transactions: [Transaction] = []
+    @Published private(set) var sum: Decimal = 0
+    @Published private(set) var bankAccount: BankAccount?
+
     @Published var sortingType: SortingType = .none
-    @Published var sum: Decimal = 0
-    @Published var bankAccount: BankAccount?
     @Published var startDate: Date = Calendar.current.date(byAdding: .month, value: -1, to: Date()) ?? Date() {
         didSet {
             if startDate > endDate {
@@ -44,6 +45,7 @@ class TransactionHistoryViewModel: ObservableObject {
     private let direction: Direction
     private let transactionsService = TransactionsService()
     private let accountService = BankAccountsService()
+    private var fetchTask: Task<Void, Never>?
 
     // MARK: - init
     init(direction: Direction) {
@@ -52,6 +54,8 @@ class TransactionHistoryViewModel: ObservableObject {
 
     // MARK: - Public Methods
     func fetchTransactions() async {
+        guard !Task.isCancelled else { return }
+        
         let calendar = Calendar.current
         let startOfDay = calendar.startOfDay(for: startDate)
         guard let endOfDay = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: endDate) else {
@@ -71,19 +75,17 @@ class TransactionHistoryViewModel: ObservableObject {
         }
     }
 
-    func load() {
-        Task {
-            await fetchTransactions()
-            do {
-                let account = try await accountService.bankAccount()
-                await MainActor.run {
-                    self.bankAccount = account
-                    self.recalculateSum()
-                }
+    func load() async {
+        await fetchTransactions()
+        do {
+            let account = try await accountService.bankAccount()
+            await MainActor.run {
+                self.bankAccount = account
+                self.recalculateSum()
             }
-            catch {
-                print("[TransactionHistoryViewModel.load] - Ошибка загрузки счета: \(error)")
-            }
+        }
+        catch {
+            print("[TransactionHistoryViewModel.load] - Ошибка загрузки счета: \(error)")
         }
     }
 
@@ -95,6 +97,13 @@ class TransactionHistoryViewModel: ObservableObject {
             transactions.sort { $0.amount > $1.amount }
         case .none:
             return
+        }
+    }
+
+    func changeDatePeriod() {
+        fetchTask?.cancel()
+        fetchTask = Task {
+            await fetchTransactions()
         }
     }
 

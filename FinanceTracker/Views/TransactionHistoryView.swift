@@ -87,14 +87,12 @@ struct TransactionHistoryView: View {
                 }
             }
         }
-        .onAppear {
-            viewModel.load()
-        }
+        .task { await viewModel.load() }
         .onChange(of: viewModel.startDate) {
-            Task { await viewModel.fetchTransactions() }
+            viewModel.changeDatePeriod()
         }
         .onChange(of: viewModel.endDate) {
-            Task { await viewModel.fetchTransactions() }
+            viewModel.changeDatePeriod()
         }
         .onChange(of: viewModel.sortingType) {
             viewModel.applySort()
