@@ -23,6 +23,9 @@ final class AccountViewModel: ObservableObject {
         if let value = Decimal(string: normalized) {
             balanceString = value.formatted()
             balance = value
+        } else {
+            balanceString = "0"
+            balance = 0
         }
     }
 
