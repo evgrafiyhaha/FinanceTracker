@@ -4,7 +4,7 @@ struct AccountView: View {
     @StateObject var viewModel = AccountViewModel()
     @State private var isPresented = false
     @FocusState private var isAmountFocused: Bool
-    @State var spoilerIsOn = true
+    @State var spoilerIsOn = false
 
     var body: some View {
         NavigationStack {
@@ -15,6 +15,13 @@ struct AccountView: View {
                     viewList
                 }
             }
+            .background(
+                ShakeDetector {
+                    spoilerIsOn.toggle()
+                    print("lol")
+
+                }
+            )
             .navigationTitle("Мой счет")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
