@@ -5,21 +5,22 @@ struct AccountView: View {
     @State private var isPresented = false
     @FocusState private var isAmountFocused: Bool
     @State var spoilerIsOn = false
-
+    
     var body: some View {
         NavigationStack {
             Group {
                 if viewModel.state == .edit {
-                    editList
+                    editBody
                 } else {
-                    viewList
+                    viewBody
                 }
+            }
+            .refreshable {
+                await viewModel.fetchAccount()
             }
             .background(
                 ShakeDetector {
                     spoilerIsOn.toggle()
-                    print("lol")
-
                 }
             )
             .navigationTitle("Мой счет")
@@ -34,7 +35,6 @@ struct AccountView: View {
                                     await viewModel.updateBalanceOnServer()
                                     await viewModel.updateCurrencyOnServer()
                                 }
-
                                 withAnimation {
                                     viewModel.state = .view
                                 }
@@ -55,52 +55,11 @@ struct AccountView: View {
             await viewModel.fetchAccount()
         }
     }
-
-    var editList: some View {
+    
+    private var editBody: some View {
         ZStack {
             VStack {
-                List {
-                    Section {
-                        HStack {
-                            Text("💰")
-                            Text("Баланс")
-                            Spacer()
-                            TextField("Баланс", text: $viewModel.balanceString)
-                                .keyboardType(.decimalPad)
-                                .multilineTextAlignment(.trailing)
-                                .foregroundStyle(.secondary)
-                                .focused($isAmountFocused)
-                                .onChange(of: isAmountFocused) {
-                                    if !isAmountFocused {
-                                        viewModel.updateBalance(from: viewModel.balanceString)
-                                    }
-                                }
-                        }
-                    }
-                    Section {
-                        Button {
-
-                            isPresented = true
-                        } label: {
-                            HStack {
-                                Text("Валюта")
-                                Spacer()
-                                Text(viewModel.currency.symbol)
-                                    .foregroundStyle(.secondary)
-                                Image("Drill-in")
-                                    .foregroundStyle(.secondary)
-                            }
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                    }
-
-                }
-                .listSectionSpacing(16)
-                .transition(.opacity)
-                .refreshable {
-                    await viewModel.fetchAccount()
-                }
+                editList
             }
             if isPresented {
                 CurrencyActionSheet(isPresented: $isPresented) { currency in
@@ -109,11 +68,10 @@ struct AccountView: View {
             }
         }
         .onAppear(perform: UIApplication.shared.addTapGestureRecognizer)
-
+        
     }
-
-    @ViewBuilder
-    var viewList: some View {
+    
+    private var viewBody: some View {
         VStack {
             List {
                 Section {
@@ -134,17 +92,54 @@ struct AccountView: View {
                     }
                     .listRowBackground(Color.ftLightGreen)
                 }
-
+                
             }
             .listSectionSpacing(16)
             .transition(.opacity)
-            .refreshable {
-                Task {
-                    await viewModel.fetchAccount()
-                }
-            }
         }
     }
+    
+    private var editList: some View {
+        List {
+            Section {
+                HStack {
+                    Text("💰")
+                    Text("Баланс")
+                    Spacer()
+                    TextField("Баланс", text: $viewModel.balanceString)
+                        .keyboardType(.decimalPad)
+                        .multilineTextAlignment(.trailing)
+                        .foregroundStyle(.secondary)
+                        .focused($isAmountFocused)
+                        .onChange(of: isAmountFocused) {
+                            if !isAmountFocused {
+                                viewModel.updateBalance(from: viewModel.balanceString)
+                            }
+                        }
+                }
+            }
+            Section {
+                Button {
+                    isPresented = true
+                } label: {
+                    HStack {
+                        Text("Валюта")
+                        Spacer()
+                        Text(viewModel.currency.symbol)
+                            .foregroundStyle(.secondary)
+                        Image("Drill-in")
+                            .foregroundStyle(.secondary)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+            
+        }
+        .listSectionSpacing(16)
+        .transition(.opacity)
+    }
+    
     private func hideKeyboard() {
         UIApplication.shared.hideKeyboard()
     }

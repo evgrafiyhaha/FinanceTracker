@@ -7,15 +7,17 @@ enum AccountState {
 }
 
 final class AccountViewModel: ObservableObject {
-    @Published var balance: Decimal = 0
 
+    // MARK: - @Published
+    @Published private(set) var balance: Decimal = 0
     @Published var balanceString: String = "0"
-
-    @Published var currency: Currency = .usd 
+    @Published var currency: Currency = .usd
     @Published var state: AccountState = .view
 
+    // MARK: - Private Properties
     private let accountService = BankAccountsService.shared
 
+    // MARK: - Public Methods
     func updateBalance(from string: String) {
         let normalized = string
             .components(separatedBy: .whitespacesAndNewlines).joined()
