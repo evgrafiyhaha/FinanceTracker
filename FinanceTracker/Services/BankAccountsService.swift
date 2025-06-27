@@ -6,6 +6,10 @@ enum BankAccountsServiceError: Error {
 
 final class BankAccountsService {
 
+    static let shared = BankAccountsService()
+
+    private init() {}
+
     // MARK: - Private Properties
     private var allAccounts: [BankAccount] = [
         BankAccount(id: 0, userId: 0, name: "Основной счёт", balance: 1000.00, currency: .rub, createdAt: Date(), updatedAt: Date()),
@@ -38,8 +42,25 @@ final class BankAccountsService {
             id: first.id,
             userId: first.userId,
             name: first.name,
-            balance: first.balance + value,
+            balance: value,
             currency: first.currency,
+            createdAt: first.createdAt,
+            updatedAt: Date()
+        )
+        allAccounts[0] = updatedAccount
+    }
+
+    func updateCurrency(withValue currency: Currency) async throws {
+        guard let first = allAccounts.first else {
+            print("[BankAccountsService.updateBalance] - Не удалось найти банковский счёт для обновления")
+            throw BankAccountsServiceError.notFound
+        }
+        let updatedAccount = BankAccount(
+            id: first.id,
+            userId: first.userId,
+            name: first.name,
+            balance: first.balance,
+            currency: currency,
             createdAt: first.createdAt,
             updatedAt: Date()
         )

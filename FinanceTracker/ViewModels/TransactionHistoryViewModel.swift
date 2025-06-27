@@ -44,7 +44,7 @@ final class TransactionHistoryViewModel: ObservableObject {
     // MARK: - Private Properties
     private let direction: Direction
     private let transactionsService = TransactionsService()
-    private let accountService = BankAccountsService()
+    private let accountService = BankAccountsService.shared
     private var fetchTask: Task<Void, Never>?
 
     // MARK: - init
