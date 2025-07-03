@@ -11,11 +11,7 @@ struct TransactionCell: View {
 
     var body: some View {
         HStack {
-            Text(String(transaction.category.emoji))
-                .font(.system(size: 14.5))
-                .padding(4)
-                .background(.ftLightGreen)
-                .clipShape(Circle())
+            EmojiView(emoji: transaction.category.emoji)
             VStack(alignment: .leading) {
                 Text(transaction.category.name)
                     .font(.system(size: 17, weight: .regular))
@@ -34,5 +30,16 @@ struct TransactionCell: View {
             }
 
         }
+    }
+}
+
+struct EmojiView: View {
+    var emoji: Character
+    var body: some View {
+        Text(String(emoji))
+            .font(.system(size: 14.5))
+            .padding(4)
+            .background(.ftLightGreen)
+            .clipShape(Circle())
     }
 }
