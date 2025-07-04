@@ -5,13 +5,14 @@ struct AccountView: View {
     @State private var isPresented = false
     @FocusState private var isAmountFocused: Bool
     @State var spoilerIsOn = false
-    
+
     var body: some View {
         NavigationStack {
             Group {
-                if viewModel.state == .edit {
+                switch viewModel.state {
+                case .edit:
                     editBody
-                } else {
+                case .view:
                     viewBody
                 }
             }
@@ -25,37 +26,15 @@ struct AccountView: View {
             )
             .navigationTitle("Мой счет")
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Group {
-                        if viewModel.state == .edit {
-                            Button("Сохранить") {
-                                hideKeyboard()
-                                viewModel.updateBalance(from: viewModel.balanceString)
-                                Task {
-                                    await viewModel.updateBalanceOnServer()
-                                    await viewModel.updateCurrencyOnServer()
-                                }
-                                withAnimation {
-                                    viewModel.state = .view
-                                }
-                            }
-                        } else {
-                            Button("Редактировать") {
-                                withAnimation {
-                                    viewModel.state = .edit
-                                }
-                            }
-                        }
-                    }
-                    .foregroundStyle(.ftPurple)
-                }
+                reductButton
             }
         }
+        .animation(.easeInOut, value: viewModel.state)
         .task {
             await viewModel.fetchAccount()
         }
     }
-    
+
     private var editBody: some View {
         ZStack {
             VStack {
@@ -68,37 +47,36 @@ struct AccountView: View {
             }
         }
         .onAppear(perform: UIApplication.shared.addTapGestureRecognizer)
-        
+
     }
-    
+
     private var viewBody: some View {
-        VStack {
-            List {
-                Section {
-                    HStack {
-                        Text("💰")
-                        Text("Баланс")
-                        Spacer()
-                        Text("\(viewModel.balance.formatted()) \(viewModel.currency.symbol)")
-                            .spoiler(isOn: $spoilerIsOn)
-                    }
-                    .listRowBackground(Color.accent)
+        List {
+            Section {
+                HStack {
+                    Text("💰")
+                    Text("Баланс")
+                    Spacer()
+                    Text("\(viewModel.balance.formatted()) \(viewModel.currency.symbol)")
+                        .spoiler(isOn: $spoilerIsOn)
                 }
-                Section {
-                    HStack {
-                        Text("Валюта")
-                        Spacer()
-                        Text(viewModel.currency.symbol)
-                    }
-                    .listRowBackground(Color.ftLightGreen)
-                }
-                
+                .listRowBackground(Color.accent)
             }
-            .listSectionSpacing(16)
-            .transition(.opacity)
+            Section {
+                HStack {
+                    Text("Валюта")
+                    Spacer()
+                    Text(viewModel.currency.symbol)
+                }
+                .listRowBackground(Color.ftLightGreen)
+            }
+
         }
+        .listSectionSpacing(16)
+        .transition(.opacity)
+
     }
-    
+
     private var editList: some View {
         List {
             Section {
@@ -134,12 +112,33 @@ struct AccountView: View {
                 }
                 .buttonStyle(.plain)
             }
-            
+
         }
         .listSectionSpacing(16)
         .transition(.opacity)
     }
-    
+
+    private var reductButton: ToolbarItem<(), some View> {
+        ToolbarItem(placement: .navigationBarTrailing) {
+            Group {
+                switch viewModel.state {
+                case .edit:
+                    Button("Сохранить") {
+                        hideKeyboard()
+                        viewModel.updateBalance(from: viewModel.balanceString)
+                        viewModel.saveChanges()
+                        viewModel.state = .view
+                    }
+                case .view:
+                    Button("Редактировать") {
+                        viewModel.state = .edit
+                    }
+                }
+            }
+            .foregroundStyle(.ftPurple)
+        }
+    }
+
     private func hideKeyboard() {
         UIApplication.shared.hideKeyboard()
     }

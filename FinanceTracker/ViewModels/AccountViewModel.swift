@@ -44,7 +44,14 @@ final class AccountViewModel: ObservableObject {
         }
     }
 
-    func updateBalanceOnServer() async {
+    func saveChanges() {
+        Task {
+            await updateBalanceOnServer()
+            await updateCurrencyOnServer()
+        }
+    }
+
+    private func updateBalanceOnServer() async {
         do {
             try await accountService.updateBalance(withValue: balance)
         } catch {
@@ -52,7 +59,7 @@ final class AccountViewModel: ObservableObject {
         }
     }
 
-    func updateCurrencyOnServer() async {
+    private func updateCurrencyOnServer() async {
         do {
             try await accountService.updateCurrency(withValue: currency)
 
