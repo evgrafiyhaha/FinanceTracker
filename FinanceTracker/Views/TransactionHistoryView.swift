@@ -80,7 +80,7 @@ struct TransactionHistoryView: View {
                     }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    NavigationLink(destination: AnalysisView()) {
+                    NavigationLink(destination: AnalysisView(direction: direction)) {
                         Image(systemName: "document")
                             .foregroundStyle(.ftPurple)
                     }

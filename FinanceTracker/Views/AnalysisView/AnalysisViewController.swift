@@ -1,27 +1,40 @@
 import UIKit
 import SwiftUI
 
+enum DatePickerType: String {
+    case start = "Период: начало"
+    case end = "Период: конец"
+}
+
 enum CellType {
-    case picker(name: String)
+    case picker(datePickerType: DatePickerType)
+    case sort
     case sum
+}
+
+protocol AnalysisViewProtocol: AnyObject {
+    func reloadTransactionTableView()
+    func reloadPickerTableView()
 }
 
 final class AnalysisViewController: UIViewController {
 
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    private let presenter: AnalysisPresenter
+
+    init(presenter: AnalysisPresenter) {
+        self.presenter = presenter
+        super.init(nibName: nil, bundle: nil)
+        presenter.view = self
+    }
+
     private var cells: [CellType] = [
-        .picker(name: "Период: начало"),
-        .picker(name: "Период: конец"),
-        .sum
-    ]
-    private var transactions: [CellType] = [
-        .picker(name: "Период: начало"),
-        .picker(name: "Период: конец"),
-        .sum,
-        .picker(name: "Период: начало"),
-        .picker(name: "Период: конец"),
-        .sum,
-        .picker(name: "Период: начало"),
-        .picker(name: "Период: конец"),
+        .picker(datePickerType: .start),
+        .picker(datePickerType: .end),
+        .sort,
         .sum
     ]
     private var tableHeightConstraint: NSLayoutConstraint?
@@ -29,13 +42,6 @@ final class AnalysisViewController: UIViewController {
     private let scrollView = UIScrollView()
 
     private var diagramView = UIView()
-
-    private lazy var titleLabel: UILabel = {
-        let label = UILabel()
-        label.text = "Анализ"
-        label.font = .systemFont(ofSize: 34, weight: .bold)
-        return label
-    }()
 
     private lazy var tableTitleLabel: UILabel = {
         let label = UILabel()
@@ -54,6 +60,7 @@ final class AnalysisViewController: UIViewController {
         transactionTableView = makeTransactionTableView()
         setupSubviews()
         setupConstraints()
+        presenter.load()
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -66,6 +73,10 @@ final class AnalysisViewController: UIViewController {
 
         navigationController?.navigationBar.standardAppearance = appearance
         navigationController?.navigationBar.scrollEdgeAppearance = appearance
+
+        self.parent?.navigationItem.title = "Анализ"
+        self.parent?.navigationController?.navigationBar.prefersLargeTitles = true
+        self.parent?.navigationItem.largeTitleDisplayMode = .always
     }
 
     private let contentView = UIView()
@@ -75,7 +86,6 @@ final class AnalysisViewController: UIViewController {
         view.addSubview(scrollView)
         scrollView.addSubview(contentView)
 
-        contentView.addSubview(titleLabel)
         contentView.addSubview(pickerTableView)
         contentView.addSubview(diagramView)
         contentView.addSubview(tableTitleLabel)
@@ -87,13 +97,12 @@ final class AnalysisViewController: UIViewController {
     private func setupConstraints() {
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         contentView.translatesAutoresizingMaskIntoConstraints = false
-        titleLabel.translatesAutoresizingMaskIntoConstraints = false
         pickerTableView.translatesAutoresizingMaskIntoConstraints = false
         diagramView.translatesAutoresizingMaskIntoConstraints = false
         tableTitleLabel.translatesAutoresizingMaskIntoConstraints = false
         transactionTableView.translatesAutoresizingMaskIntoConstraints = false
 
-        tableHeightConstraint = transactionTableView.heightAnchor.constraint(equalToConstant: CGFloat(transactions.count) * 60)
+        tableHeightConstraint = transactionTableView.heightAnchor.constraint(equalToConstant: CGFloat(presenter.transactions.count) * 60)
         tableHeightConstraint?.isActive = true
 
         NSLayoutConstraint.activate([
@@ -108,13 +117,10 @@ final class AnalysisViewController: UIViewController {
             contentView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
             contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor),
 
-            titleLabel.topAnchor.constraint(equalTo: contentView.safeAreaLayoutGuide.topAnchor),
-            titleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-
-            pickerTableView.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 16),
+            pickerTableView.topAnchor.constraint(equalTo: contentView.topAnchor),
             pickerTableView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
             pickerTableView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
-            pickerTableView.heightAnchor.constraint(equalToConstant: 132),
+            pickerTableView.heightAnchor.constraint(equalToConstant: 176),
 
             diagramView.topAnchor.constraint(equalTo: pickerTableView.bottomAnchor),
             diagramView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
@@ -141,6 +147,7 @@ final class AnalysisViewController: UIViewController {
     private func makePickerTableView() -> UITableView {
         let tableView = UITableView()
         tableView.register(TotalSumTableViewCell.self, forCellReuseIdentifier: TotalSumTableViewCell.reuseIdentifier)
+        tableView.register(SortTableViewCell.self, forCellReuseIdentifier: SortTableViewCell.reuseIdentifier)
         tableView.register(PickerTableViewCell.self, forCellReuseIdentifier: PickerTableViewCell.reuseIdentifier)
         tableView.dataSource = self
         tableView.delegate = self
@@ -160,17 +167,6 @@ final class AnalysisViewController: UIViewController {
         tableView.tableHeaderView = UIView()
         return tableView
     }
-
-    //    @objc private func addItem() {
-    //            items.append("\(items.count + 1)")
-    //            tableView.reloadData()
-    //
-    //
-    //            tableHeightConstraint?.constant = CGFloat(items.count) * 44
-    //            UIView.animate(withDuration: 0.3) {
-    //                self.view.layoutIfNeeded()
-    //            }
-    //        }
 }
 
 extension AnalysisViewController: UITableViewDataSource, UITableViewDelegate {
@@ -178,7 +174,7 @@ extension AnalysisViewController: UITableViewDataSource, UITableViewDelegate {
         if tableView == pickerTableView {
             return cells.count
         } else if tableView == transactionTableView {
-            return transactions.count
+            return presenter.transactions.count
         }
         return 0
     }
@@ -187,18 +183,25 @@ extension AnalysisViewController: UITableViewDataSource, UITableViewDelegate {
         if tableView == pickerTableView {
             let type = cells[indexPath.row]
             switch type {
-            case .picker(let name):
+            case .picker(let datePickerType):
                 guard let cell = tableView.dequeueReusableCell(withIdentifier: PickerTableViewCell.reuseIdentifier, for: indexPath) as? PickerTableViewCell else {
                     return UITableViewCell()
                 }
-                cell.setupCell(with: name, delegate: self)
+                cell.setupCell(with: datePickerType,for:indexPath.row == 0 ? presenter.startDate : presenter.endDate , delegate: self)
                 setupSeparator(for: cell, at: indexPath)
                 return cell
             case .sum:
                 guard let cell = tableView.dequeueReusableCell(withIdentifier: TotalSumTableViewCell.reuseIdentifier, for: indexPath) as? TotalSumTableViewCell else {
                     return UITableViewCell()
                 }
-                cell.setupCell(withValue: 0, for: .rub, delegate: self)
+                cell.setupCell(withValue: presenter.sum, for: .rub)
+                setupSeparator(for: cell, at: indexPath)
+                return cell
+            case .sort:
+                guard let cell = tableView.dequeueReusableCell(withIdentifier: SortTableViewCell.reuseIdentifier, for: indexPath) as? SortTableViewCell else {
+                    return UITableViewCell()
+                }
+                cell.setupCell(withType: presenter.sortingType, delegate: self)
                 setupSeparator(for: cell, at: indexPath)
                 return cell
             }
@@ -206,7 +209,12 @@ extension AnalysisViewController: UITableViewDataSource, UITableViewDelegate {
             guard let cell = tableView.dequeueReusableCell(withIdentifier: TransactionTableViewCell.reuseIdentifier, for: indexPath) as? TransactionTableViewCell else {
                 return UITableViewCell()
             }
-            cell.setupCell(with: TransactionsService().transactions[indexPath.row], percent: 7, delegate: self)
+            let transaction = presenter.transactions[indexPath.row]
+            let amount = NSDecimalNumber(decimal: transaction.amount)
+            let sum = NSDecimalNumber(decimal: presenter.sum)
+            let percentDecimal = amount.multiplying(by: 100).dividing(by: sum)
+            let percent = percentDecimal.rounding(accordingToBehavior: nil).intValue
+            cell.setupCell(with: transaction, percent: percent, delegate: self)
             return cell
         }
     }
@@ -220,5 +228,39 @@ extension AnalysisViewController: UITableViewDataSource, UITableViewDelegate {
         let swiftUIView = TransactionEditView()
         let hostingController = UIHostingController(rootView: swiftUIView)
         navigationController?.pushViewController(hostingController, animated: true)
+    }
+}
+
+
+extension AnalysisViewController: AnalysisViewProtocol {
+    func reloadTransactionTableView() {
+        transactionTableView.reloadData()
+        tableHeightConstraint?.constant = CGFloat(presenter.transactions.count) * 60
+        UIView.animate(withDuration: 0.3) {
+            self.view.layoutIfNeeded()
+        }
+    }
+    func reloadPickerTableView() {
+        pickerTableView.reloadData()
+    }
+}
+
+extension AnalysisViewController: PickerTableViewCellDelegate {
+    func updateDate(_ date: Date, for type: DatePickerType) {
+        switch type {
+        case .start:
+            presenter.startDate = date
+        case .end:
+            presenter.endDate = date
+        }
+        presenter.load()
+    }
+
+}
+
+extension AnalysisViewController: SortTableViewCellDelegate {
+    func sort(withType type: SortingType) {
+        presenter.sortingType = type
+        presenter.load()
     }
 }

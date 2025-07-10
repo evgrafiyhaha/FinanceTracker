@@ -1,12 +1,15 @@
 import UIKit
 
-//protocol CartTableViewCellDelegate {
-//    func present(with id: String, image: UIImage)
-//}
+protocol PickerTableViewCellDelegate: AnyObject {
+    func updateDate(_ date: Date, for type: DatePickerType)
+}
 
 final class PickerTableViewCell: UITableViewCell {
 
     static let reuseIdentifier = "PickerTableViewCell"
+
+    private weak var delegate: PickerTableViewCellDelegate?
+    private var type: DatePickerType?
 
     private lazy var nameLabel: UILabel = {
         let label = UILabel()
@@ -36,8 +39,11 @@ final class PickerTableViewCell: UITableViewCell {
         setupConstraints()
     }
 
-    func setupCell(with name: String, delegate: UIViewController) {
-        nameLabel.text = name
+    func setupCell(with type: DatePickerType, for date: Date, delegate: PickerTableViewCellDelegate) {
+        self.type = type
+        self.delegate = delegate
+        nameLabel.text = type.rawValue
+        datePicker.setDate(date, animated: false)
     }
 
     private func setupSubviews() {
@@ -61,6 +67,10 @@ final class PickerTableViewCell: UITableViewCell {
 
     @objc
     private func datePickerValueChanged(_ sender: UIDatePicker) {
-
+        guard
+            let delegate,
+            let type
+        else { return }
+        delegate.updateDate(sender.date, for: type)
     }
 }

@@ -1,9 +1,5 @@
 import UIKit
 
-//protocol CartTableViewCellDelegate {
-//    func present(with id: String, image: UIImage)
-//}
-
 final class TotalSumTableViewCell: UITableViewCell {
 
     static let reuseIdentifier = "TotalSumTableViewCell"
@@ -32,7 +28,7 @@ final class TotalSumTableViewCell: UITableViewCell {
         setupConstraints()
     }
 
-    func setupCell(withValue value: Decimal, for currency: Currency, delegate: UIViewController) {
+    func setupCell(withValue value: Decimal, for currency: Currency) {
         nameLabel.text = "Сумма"
         sumLabel.text = "\(value.formatted()) \(currency.symbol)"
     }
