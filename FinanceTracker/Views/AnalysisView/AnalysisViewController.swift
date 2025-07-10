@@ -19,28 +19,17 @@ protocol AnalysisViewProtocol: AnyObject {
 
 final class AnalysisViewController: UIViewController {
 
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-
-    private let presenter: AnalysisPresenter
-
-    init(presenter: AnalysisPresenter) {
-        self.presenter = presenter
-        super.init(nibName: nil, bundle: nil)
-        presenter.view = self
-    }
-
-    private var cells: [CellType] = [
+    // MARK: - Private Properties
+    private let presenter: AnalysisPresenterProtocol
+    private let cells: [CellType] = [
         .picker(datePickerType: .start),
         .picker(datePickerType: .end),
         .sort,
         .sum
     ]
     private var tableHeightConstraint: NSLayoutConstraint?
-
     private let scrollView = UIScrollView()
-
+    private let contentView = UIView()
     private var diagramView = UIView()
 
     private lazy var tableTitleLabel: UILabel = {
@@ -54,6 +43,18 @@ final class AnalysisViewController: UIViewController {
     private var pickerTableView: UITableView!
     private var transactionTableView: UITableView!
 
+    // MARK: - Init
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    init(presenter: AnalysisPresenterProtocol) {
+        self.presenter = presenter
+        super.init(nibName: nil, bundle: nil)
+        presenter.view = self
+    }
+
+    // MARK: - Override Methods
     override func viewDidLoad() {
         super.viewDidLoad()
         pickerTableView = makePickerTableView()
@@ -79,8 +80,7 @@ final class AnalysisViewController: UIViewController {
         self.parent?.navigationItem.largeTitleDisplayMode = .always
     }
 
-    private let contentView = UIView()
-
+    // MARK: - Private Methods
     private func setupSubviews() {
         view.backgroundColor = .ftBackground
         view.addSubview(scrollView)
@@ -137,7 +137,8 @@ final class AnalysisViewController: UIViewController {
     }
 
     private func setupSeparator(for cell: UITableViewCell, at indexPath: IndexPath) {
-        if indexPath.row == cells.count-1 {
+        let last = cell is TransactionTableViewCell ? presenter.transactions.count-1 : cells.count-1
+        if indexPath.row == last {
             cell.separatorInset = UIEdgeInsets(top: 0, left: UIScreen.main.bounds.width, bottom: 0, right: 0)
         } else {
             cell.separatorInset = UIEdgeInsets(top: 0, left: 16, bottom: 0, right: 0)
@@ -169,6 +170,7 @@ final class AnalysisViewController: UIViewController {
     }
 }
 
+// MARK: - UITableView
 extension AnalysisViewController: UITableViewDataSource, UITableViewDelegate {
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         if tableView == pickerTableView {
@@ -194,7 +196,7 @@ extension AnalysisViewController: UITableViewDataSource, UITableViewDelegate {
                 guard let cell = tableView.dequeueReusableCell(withIdentifier: TotalSumTableViewCell.reuseIdentifier, for: indexPath) as? TotalSumTableViewCell else {
                     return UITableViewCell()
                 }
-                cell.setupCell(withValue: presenter.sum, for: .rub)
+                cell.setupCell(withValue: presenter.sum, for: presenter.bankAccount?.currency)
                 setupSeparator(for: cell, at: indexPath)
                 return cell
             case .sort:
@@ -215,6 +217,7 @@ extension AnalysisViewController: UITableViewDataSource, UITableViewDelegate {
             let percentDecimal = amount.multiplying(by: 100).dividing(by: sum)
             let percent = percentDecimal.rounding(accordingToBehavior: nil).intValue
             cell.setupCell(with: transaction, percent: percent, delegate: self)
+            setupSeparator(for: cell, at: indexPath)
             return cell
         }
     }
@@ -231,7 +234,7 @@ extension AnalysisViewController: UITableViewDataSource, UITableViewDelegate {
     }
 }
 
-
+// MARK: - AnalysisViewProtocol
 extension AnalysisViewController: AnalysisViewProtocol {
     func reloadTransactionTableView() {
         transactionTableView.reloadData()
@@ -245,6 +248,7 @@ extension AnalysisViewController: AnalysisViewProtocol {
     }
 }
 
+// MARK: - PickerTableViewCellDelegate
 extension AnalysisViewController: PickerTableViewCellDelegate {
     func updateDate(_ date: Date, for type: DatePickerType) {
         switch type {
@@ -255,9 +259,9 @@ extension AnalysisViewController: PickerTableViewCellDelegate {
         }
         presenter.load()
     }
-
 }
 
+// MARK: - SortTableViewCellDelegate
 extension AnalysisViewController: SortTableViewCellDelegate {
     func sort(withType type: SortingType) {
         presenter.sortingType = type

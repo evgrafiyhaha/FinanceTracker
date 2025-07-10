@@ -1,17 +1,24 @@
 import Foundation
 
-final class AnalysisPresenter {
-    var transactions: [Transaction] = []
-    var view: AnalysisViewProtocol?
-    var sortingType: SortingType = .none
+protocol AnalysisPresenterProtocol: AnyObject {
+    var view: AnalysisViewProtocol? { get set }
+    var startDate: Date { get set }
+    var endDate: Date { get set }
+    var sortingType: SortingType { get set }
+    var transactions: [Transaction] { get }
+    var bankAccount: BankAccount? { get }
+    var sum: Decimal { get }
+    func load()
 
-    init(direction: Direction) {
-        self.direction = direction
-    }
+}
+
+final class AnalysisPresenter: AnalysisPresenterProtocol {
+
     // MARK: - Private Properties
-    private let direction: Direction
-    private let transactionsService = TransactionsService()
-    private(set) var sum: Decimal = 0
+    weak var view: AnalysisViewProtocol?
+
+    var transactions: [Transaction] = []
+    var sortingType: SortingType = .none
 
     var startDate: Date = Calendar.current.date(byAdding: .month, value: -1, to: Date()) ?? Date() {
         didSet {
@@ -28,8 +35,39 @@ final class AnalysisPresenter {
         }
     }
 
-    func fetchTransactions() async {
+    // MARK: - Private Properties
+    private(set) var sum: Decimal = 0
+    private(set) var bankAccount: BankAccount?
 
+    private let direction: Direction
+    private let transactionsService = TransactionsService()
+    private let accountService = BankAccountsService.shared
+
+    // MARK: - Init
+    init(direction: Direction) {
+        self.direction = direction
+    }
+
+    // MARK: - Public Methods
+    func load() {
+        Task {
+            await fetchTransactions()
+            do {
+                let account = try await accountService.bankAccount()
+                await MainActor.run {
+                    self.bankAccount = account
+                    self.recalculateSum()
+                    self.view?.reloadPickerTableView()
+                }
+            }
+            catch {
+                print("[AnalysisPresenter.load] - Ошибка загрузки счета: \(error)")
+            }
+        }
+    }
+
+    // MARK: - Private Methods
+    private func fetchTransactions() async {
         let calendar = Calendar.current
         let startOfDay = calendar.startOfDay(for: startDate)
         guard let endOfDay = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: endDate) else {
@@ -52,18 +90,11 @@ final class AnalysisPresenter {
         }
     }
 
-    func load() {
-        Task {
-            await fetchTransactions()
-        }
-    }
-
-    // MARK: - Private Methods
     private func recalculateSum() {
         sum = transactions.reduce(0) { $0 + $1.amount }
     }
 
-    func applySort() {
+    private func applySort() {
         switch sortingType {
         case .date:
             transactions.sort { $0.transactionDate > $1.transactionDate }

@@ -6,9 +6,12 @@ protocol SortTableViewCellDelegate: AnyObject {
 
 final class SortTableViewCell: UITableViewCell {
 
+    // MARK: - Static Properties
     static let reuseIdentifier = "SortTableViewCell"
 
-    weak var delegate: SortTableViewCellDelegate?
+    // MARK: - Private Properties
+    private weak var delegate: SortTableViewCellDelegate?
+    private var currentType: SortingType = .date
 
     private lazy var nameLabel: UILabel = {
         let label = UILabel()
@@ -22,8 +25,7 @@ final class SortTableViewCell: UITableViewCell {
         return button
     }()
 
-    private var currentType: SortingType = .date
-
+    // MARK: - Init
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
         selectionStyle = .none
@@ -37,6 +39,7 @@ final class SortTableViewCell: UITableViewCell {
         setupConstraints()
     }
 
+    // MARK: - Public Methods
     func setupCell(withType type: SortingType, delegate: SortTableViewCellDelegate) {
         self.delegate = delegate
         self.currentType = type
@@ -44,6 +47,7 @@ final class SortTableViewCell: UITableViewCell {
         configureMenu()
     }
 
+    // MARK: - Private Methods
     private func setupSubviews() {
         contentView.addSubview(nameLabel)
         contentView.addSubview(sortButton)
