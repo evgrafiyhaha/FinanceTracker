@@ -28,7 +28,9 @@ struct TransactionCell: View {
                     Text(transaction.transactionDate.formatted(date: .omitted, time: .shortened))
                 }
             }
-
+            .padding(.horizontal)
+            Image("Drill-in")
+                .foregroundStyle(.secondary)
         }
     }
 }

@@ -8,6 +8,7 @@ protocol AnalysisPresenterProtocol: AnyObject {
     var transactions: [Transaction] { get }
     var bankAccount: BankAccount? { get }
     var sum: Decimal { get }
+    var direction: Direction { get }
     func load()
 
 }
@@ -19,6 +20,7 @@ final class AnalysisPresenter: AnalysisPresenterProtocol {
 
     var transactions: [Transaction] = []
     var sortingType: SortingType = .none
+    let direction: Direction
 
     var startDate: Date = Calendar.current.date(byAdding: .month, value: -1, to: Date()) ?? Date() {
         didSet {
@@ -38,9 +40,7 @@ final class AnalysisPresenter: AnalysisPresenterProtocol {
     // MARK: - Private Properties
     private(set) var sum: Decimal = 0
     private(set) var bankAccount: BankAccount?
-
-    private let direction: Direction
-    private let transactionsService = TransactionsService()
+    private let transactionsService = TransactionsService.shared
     private let accountService = BankAccountsService.shared
 
     // MARK: - Init

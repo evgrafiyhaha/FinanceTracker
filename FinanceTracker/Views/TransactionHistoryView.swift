@@ -5,6 +5,7 @@ struct TransactionHistoryView: View {
     @Environment(\.dismiss) private var dismiss
     var direction: Direction
     @StateObject var viewModel: TransactionHistoryViewModel
+    @State private var selectedTransaction: Transaction? = nil
 
     init(direction: Direction) {
         self.direction = direction
@@ -53,13 +54,17 @@ struct TransactionHistoryView: View {
                     }
                     Section(header: Text("Операции")) {
                         ForEach(viewModel.transactions, id: \.id) { transaction in
-                            NavigationLink(destination: TransactionEditView()) {
+                            Button {
+                                selectedTransaction = transaction
+                            } label: {
                                 TransactionCell(
                                     transaction: transaction,
                                     context: .history
                                 )
-                                    .padding(4)
+                                .contentShape(Rectangle())
+                                .padding(4)
                             }
+                            .buttonStyle(.plain)
                         }
                     }
 
@@ -86,6 +91,12 @@ struct TransactionHistoryView: View {
                     }
                 }
             }
+        }
+        .refreshable {
+            await viewModel.load()
+        }
+        .fullScreenCover(item: $selectedTransaction) { transaction in
+            TransactionEditView(transaction, direction: direction)
         }
         .task { await viewModel.load() }
         .onChange(of: viewModel.startDate) {
