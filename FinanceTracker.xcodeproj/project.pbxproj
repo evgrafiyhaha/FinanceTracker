@@ -6,10 +6,6 @@
 	objectVersion = 77;
 	objects = {
 
-/* Begin PBXBuildFile section */
-		F6CC386A2E17481B00AE47C5 /* Fuse in Frameworks */ = {isa = PBXBuildFile; productRef = F6CC38692E17481B00AE47C5 /* Fuse */; };
-/* End PBXBuildFile section */
-
 /* Begin PBXContainerItemProxy section */
 		F6BA8B0B2DF4936500E4BFF3 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -56,7 +52,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F6CC386A2E17481B00AE47C5 /* Fuse in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -117,7 +112,6 @@
 			);
 			name = FinanceTracker;
 			packageProductDependencies = (
-				F6CC38692E17481B00AE47C5 /* Fuse */,
 			);
 			productName = FinanceTracker;
 			productReference = F6BA8AFA2DF4936400E4BFF3 /* FinanceTracker.app */;
@@ -202,7 +196,6 @@
 			mainGroup = F6BA8AF12DF4936400E4BFF3;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				F6CC38682E17481B00AE47C5 /* XCRemoteSwiftPackageReference "fuse-swift" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = F6BA8AFB2DF4936400E4BFF3 /* Products */;
@@ -567,25 +560,6 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
-
-/* Begin XCRemoteSwiftPackageReference section */
-		F6CC38682E17481B00AE47C5 /* XCRemoteSwiftPackageReference "fuse-swift" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/krisk/fuse-swift";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.4.0;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		F6CC38692E17481B00AE47C5 /* Fuse */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = F6CC38682E17481B00AE47C5 /* XCRemoteSwiftPackageReference "fuse-swift" */;
-			productName = Fuse;
-		};
-/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = F6BA8AF22DF4936400E4BFF3 /* Project object */;
 }

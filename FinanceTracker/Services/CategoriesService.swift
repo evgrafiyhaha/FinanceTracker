@@ -5,10 +5,11 @@ final class CategoriesService {
         Category(id: 0, name: "Зарплата", emoji: "💰", direction: .income),
         Category(id: 1, name: "Аренда", emoji: "🏠", direction: .outcome),
         Category(id: 2, name: "Ремонт", emoji: "🛠", direction: .outcome),
-        Category(id: 3, name: "На собачку", emoji: "🐕", direction: .outcome),
+        Category(id: 7, name: "На собачку", emoji: "🐕", direction: .outcome),
         Category(id: 4, name: "Одежда", emoji: "👔", direction: .outcome),
         Category(id: 5, name: "Спортзал", emoji: "🏋️‍♂️", direction: .outcome),
         Category(id: 6, name: "Машина", emoji: "🚗", direction: .outcome),
+        Category(id: 3, name: "Подработка", emoji: "👤", direction: .income)
     ]
 
     // MARK: - Public Methods

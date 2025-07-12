@@ -7,6 +7,10 @@ enum TransactionsServiceError: Error {
 
 final class TransactionsService {
 
+    static let shared = TransactionsService()
+
+    private init() {}
+
     // MARK: - Static Properties
     static let categories: [Category] = [
         Category(id: 0, name: "Зарплата", emoji: "💰", direction: .income),
@@ -37,6 +41,10 @@ final class TransactionsService {
         return transactions.filter {
             $0.transactionDate >= from && $0.transactionDate <= to
         }
+    }
+
+    func transactions() async throws -> [Transaction] {
+        return transactions
     }
 
     func add(_ transaction: Transaction) async throws {

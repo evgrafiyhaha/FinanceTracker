@@ -1,5 +1,4 @@
 import Foundation
-import Fuse
 
 final class CategoriesViewModel: ObservableObject {
 
@@ -32,22 +31,6 @@ final class CategoriesViewModel: ObservableObject {
         .sorted { $0.1 < $1.1 }
         .map { $0.0 }
     }
-    //    private let fuse = Fuse()
-    // Альтернативный вариант с использованием Fuse
-    //    var filteredCategories: [Category] {
-    //        guard !searchText.isEmpty else { return categories }
-    //
-    //        return categories.compactMap { category in
-    //            if let result = fuse.search(searchText, in: category.name),
-    //               result.score < 0.5 {
-    //                return (category, result.score)
-    //            } else {
-    //                return nil
-    //            }
-    //        }
-    //        .sorted { $0.1 < $1.1 }
-    //        .map { $0.0 }
-    //    }
 
     // MARK: - Private Properties
     private let categoriesService = CategoriesService()
