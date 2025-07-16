@@ -73,10 +73,9 @@ final class TransactionEditViewModel: ObservableObject {
         case .create:
             Task {
                 do {
-                    let lastIndex = try await transactionsService.transactions().count
                     try await transactionsService.add(
                         Transaction(
-                            id: lastIndex,
+                            id: -1,
                             account: bankAccount,
                             category: category,
                             amount: amount,
@@ -87,7 +86,18 @@ final class TransactionEditViewModel: ObservableObject {
                         )
                     )
                 } catch {
-                    print("[TransactionEditViewModel.saveTransaction] - Ошибка создания операции: \(error)")
+                    if let networkError = error as? NetworkError {
+                        switch networkError {
+                        case let .httpError(statusCode, data):
+                            print("Status code: \(statusCode)")
+                            print("Response body:", String(data: data, encoding: .utf8) ?? "nil")
+                        default:
+                            print("Другая ошибка:", networkError)
+                        }
+                    } else {
+                        print("Неизвестная ошибка типа:", error)
+                    }
+
                 }
             }
         case .edit:
@@ -111,7 +121,17 @@ final class TransactionEditViewModel: ObservableObject {
                         with: updated
                     )
                 } catch {
-                    print("[TransactionEditViewModel.saveTransaction] - Ошибка обновлении операции: \(error)")
+                    if let networkError = error as? NetworkError {
+                        switch networkError {
+                        case let .httpError(statusCode, data):
+                            print("Status code: \(statusCode)")
+                            print("Response body:", String(data: data, encoding: .utf8) ?? "nil")
+                        default:
+                            print("Другая ошибка:", networkError)
+                        }
+                    } else {
+                        print("Неизвестная ошибка типа:", error)
+                    }
                 }
             }
         }

@@ -135,10 +135,3 @@ struct TransactionEditView: View {
         }
     }
 }
-
-// MARK: - Preview
-
-#Preview {
-    TransactionEditView(TransactionsService.shared.transactions[5], direction: .outcome)
-}
-

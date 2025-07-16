@@ -29,7 +29,8 @@ struct TransactionsListView: View {
                             } label: {
                                 TransactionCell(
                                     transaction: transaction,
-                                    context: .today
+                                    context: .today,
+                                    currency: viewModel.bankAccount?.currency ?? .usd
                                 )
                                 .contentShape(Rectangle())
                                 .padding(4)

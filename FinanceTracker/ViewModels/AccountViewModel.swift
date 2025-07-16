@@ -15,6 +15,7 @@ final class AccountViewModel: ObservableObject {
     @Published var state: AccountState = .view
 
     // MARK: - Private Properties
+    private var account: BankAccount?
     private let accountService = BankAccountsService.shared
 
     // MARK: - Public Methods
@@ -35,6 +36,7 @@ final class AccountViewModel: ObservableObject {
         do {
             let account = try await accountService.bankAccount()
             await MainActor.run {
+                self.account = account
                 self.updateBalance(from: account.balance.formatted())
                 self.currency = account.currency
             }
@@ -46,25 +48,16 @@ final class AccountViewModel: ObservableObject {
 
     func saveChanges() {
         Task {
-            await updateBalanceOnServer()
-            await updateCurrencyOnServer()
+            await updateOnServer()
         }
     }
 
-    private func updateBalanceOnServer() async {
+    private func updateOnServer() async {
+        guard let account else { return }
         do {
-            try await accountService.updateBalance(withValue: balance)
+            try await accountService.updateBalance(old: account, with: balance, for: currency)
         } catch {
             print("[AccountViewModel.updateBalanceOnServer] - Ошибка обновления баланса: \(error)")
-        }
-    }
-
-    private func updateCurrencyOnServer() async {
-        do {
-            try await accountService.updateCurrency(withValue: currency)
-
-        } catch {
-            print("[AccountViewModel.updateCurrencyOnServer] - Ошибка обновления валюты: \(error)")
         }
     }
 }

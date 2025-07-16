@@ -59,7 +59,8 @@ struct TransactionHistoryView: View {
                             } label: {
                                 TransactionCell(
                                     transaction: transaction,
-                                    context: .history
+                                    context: .history,
+                                    currency: viewModel.bankAccount?.currency ?? .usd
                                 )
                                 .contentShape(Rectangle())
                                 .padding(4)

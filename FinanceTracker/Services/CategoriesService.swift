@@ -1,23 +1,24 @@
+import Foundation
+
+enum CategoriesServiceError: Error {
+    case urlError
+}
+
 final class CategoriesService {
 
-    // MARK: - Private Properties
-    private let allCategories: [Category] = [
-        Category(id: 0, name: "Зарплата", emoji: "💰", direction: .income),
-        Category(id: 1, name: "Аренда", emoji: "🏠", direction: .outcome),
-        Category(id: 2, name: "Ремонт", emoji: "🛠", direction: .outcome),
-        Category(id: 7, name: "На собачку", emoji: "🐕", direction: .outcome),
-        Category(id: 4, name: "Одежда", emoji: "👔", direction: .outcome),
-        Category(id: 5, name: "Спортзал", emoji: "🏋️‍♂️", direction: .outcome),
-        Category(id: 6, name: "Машина", emoji: "🚗", direction: .outcome),
-        Category(id: 3, name: "Подработка", emoji: "👤", direction: .income)
-    ]
+    private let client = NetworkClient(token: NetworkConstants.token)
 
     // MARK: - Public Methods
     func categories() async throws -> [Category] {
-        return allCategories
+        guard let categoriesURL = URL(string: NetworkConstants.categoriesUrl) else {
+            throw CategoriesServiceError.urlError
+        }
+        let categs = try await client.request(url: categoriesURL, method: .get, responseType: [CategoryResponse].self)
+        return categs.map( { Category(response: $0) } )
     }
 
     func categories(withDirection direction: Direction) async throws -> [Category] {
-        return allCategories.filter { $0.direction == direction }
+        let all = try await categories()
+        return all.filter { $0.direction == direction }
     }
 }
