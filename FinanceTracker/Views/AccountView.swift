@@ -28,6 +28,11 @@ struct AccountView: View {
             .toolbar {
                 reductButton
             }
+            .withLoadingAndErrorOverlay(
+                    isLoading: viewModel.isLoading,
+                    error: viewModel.error,
+                    onDismiss: { viewModel.error = nil }
+                )
         }
         .animation(.easeInOut, value: viewModel.state)
         .task {

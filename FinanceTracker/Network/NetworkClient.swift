@@ -1,12 +1,5 @@
 import Foundation
 
-enum NetworkError: Error {
-    case invalidResponse
-    case httpError(statusCode: Int, data: Data)
-    case serializationError(Error)
-    case deserializationError(Error)
-}
-
 final class NetworkClient {
     private let session: URLSession
     private let jsonEncoder: JSONEncoder

@@ -2,14 +2,16 @@ import SwiftUI
 
 struct TransactionEditView: View {
     @Environment(\.dismiss) private var dismiss
+    var onSave: (() async -> Void)
     var direction: Direction
     @FocusState private var isAmountFocused: Bool
     @StateObject var viewModel: TransactionEditViewModel
     @State private var showValidationAlert = false
     @State private var showDeleteConfirmation = false
 
-    init(_ transaction: Transaction?, direction: Direction) {
+    init(_ transaction: Transaction?, direction: Direction,onSave: @escaping () async -> Void) {
         self.direction = direction
+        self.onSave = onSave
         _viewModel = StateObject(wrappedValue: TransactionEditViewModel(transaction, direction: direction))
     }
     var body: some View {
@@ -35,8 +37,11 @@ struct TransactionEditView: View {
                             if viewModel.category == nil || viewModel.amount == nil {
                                 showValidationAlert = true
                             } else {
-                                viewModel.saveTransaction()
-                                dismiss()
+                                Task {
+                                    await viewModel.saveTransaction()
+                                    dismiss()
+                                    await onSave()
+                                }
                             }
                         }) {
                             HStack {
@@ -52,14 +57,22 @@ struct TransactionEditView: View {
         }
         .alert("Удалить запись?", isPresented: $showDeleteConfirmation) {
             Button("Удалить", role: .destructive) {
-                viewModel.deleteTransaction()
-                dismiss()
+                Task {
+                    await viewModel.deleteTransaction()
+                    dismiss()
+                    await onSave()
+                }
             }
             Button("Отмена", role: .cancel) {}
         } message: {
             Text("Вы уверены, что хотите удалить этот \(direction == .income ? "доход" : "расход")?")
         }
         .onAppear(perform: UIApplication.shared.addTapGestureRecognizer)
+        .withLoadingAndErrorOverlay(
+                isLoading: viewModel.isLoading,
+                error: viewModel.error,
+                onDismiss: { viewModel.error = nil }
+            )
         .task { await viewModel.loadData() }
     }
     @ViewBuilder

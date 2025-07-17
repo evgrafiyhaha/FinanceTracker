@@ -229,7 +229,14 @@ extension AnalysisViewController: UITableViewDataSource, UITableViewDelegate {
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         guard tableView == transactionTableView else { return }
         let transaction = presenter.transactions[indexPath.row]
-        let swiftUIView = TransactionEditView(transaction, direction: presenter.direction)
+        let swiftUIView = TransactionEditView(
+            transaction,
+            direction: presenter.direction,
+            onSave: { [weak self] in
+                self?.transactionTableView.reloadData()
+                self?.pickerTableView.reloadData()
+
+            })
         let hostingController = UIHostingController(rootView: swiftUIView)
         hostingController.modalPresentationStyle = .fullScreen
         present(hostingController,animated:true)

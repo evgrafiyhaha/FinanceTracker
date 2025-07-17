@@ -1,17 +1,15 @@
 import Foundation
 
-enum BankAccountsServiceError: Error {
-    case notFound
-    case urlError
-}
-
 final class BankAccountsService {
 
     let client = NetworkClient(token: NetworkConstants.token)
 
     private lazy var formatter: ISO8601DateFormatter = {
         let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        formatter.formatOptions = [
+            .withInternetDateTime,
+            .withFractionalSeconds
+        ]
         return formatter
     }()
 
@@ -27,7 +25,6 @@ final class BankAccountsService {
         }
         let accounts = try await client.request(url: url, method: .get, responseType: [BankAccountResponse].self)
         guard let first = accounts.first else {
-            print("[BankAccountsService.bankAccount] - Не удалось найти ни одного банковского счёта")
             throw BankAccountsServiceError.notFound
         }
 
@@ -53,6 +50,11 @@ final class BankAccountsService {
         guard let url = URL(string: "\(NetworkConstants.accountsUrl)/\(account.id)") else {
             throw BankAccountsServiceError.urlError
         }
-        let _ = try await client.request(url: url, method: .put, requestBody: BankAccountRequest(from: account), responseType: BankAccountResponse.self)
+        let _ = try await client.request(
+            url: url,
+            method: .put,
+            requestBody: BankAccountRequest(from: account),
+            responseType: BankAccountResponse.self
+        )
     }
 }

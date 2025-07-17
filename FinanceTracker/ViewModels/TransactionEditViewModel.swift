@@ -16,6 +16,8 @@ final class TransactionEditViewModel: ObservableObject {
     @Published private(set) var categories: [Category] = []
     @Published var amountString: String = ""
     @Published private(set) var currency: Currency = .usd
+    @Published var isLoading: Bool = false
+    @Published var error: String? = nil
     private var bankAccount: BankAccount?
 
     // MARK: - Public Properties
@@ -46,22 +48,31 @@ final class TransactionEditViewModel: ObservableObject {
 
     // MARK: - Public Methods
     func loadData() async {
+        await MainActor.run { isLoading = true; error = nil }
+        defer { Task { @MainActor in isLoading = false } }
+
         await fetchCategories()
         await fetchAccount()
     }
 
-    func deleteTransaction()  {
+    func deleteTransaction()  async {
+        await MainActor.run { isLoading = true; error = nil }
+        defer { Task { @MainActor in isLoading = false } }
+
         guard let transaction else { return }
         Task {
             do {
                 try await transactionsService.delete(withId: transaction.id)
             } catch {
-                print("[TransactionEditViewModel.deleteTransaction] - Ошибка удаления операции: \(error)")
+                handleError(error, context: "TransactionEditViewModel.deleteTransaction")
             }
         }
     }
 
-    func saveTransaction() {
+    func saveTransaction() async {
+        await MainActor.run { isLoading = true; error = nil }
+        defer { Task { @MainActor in isLoading = false } }
+
         guard
             let category,
             let amount,
@@ -86,18 +97,7 @@ final class TransactionEditViewModel: ObservableObject {
                         )
                     )
                 } catch {
-                    if let networkError = error as? NetworkError {
-                        switch networkError {
-                        case let .httpError(statusCode, data):
-                            print("Status code: \(statusCode)")
-                            print("Response body:", String(data: data, encoding: .utf8) ?? "nil")
-                        default:
-                            print("Другая ошибка:", networkError)
-                        }
-                    } else {
-                        print("Неизвестная ошибка типа:", error)
-                    }
-
+                    handleError(error, context: "TransactionEditViewModel.saveTransaction")
                 }
             }
         case .edit:
@@ -121,17 +121,7 @@ final class TransactionEditViewModel: ObservableObject {
                         with: updated
                     )
                 } catch {
-                    if let networkError = error as? NetworkError {
-                        switch networkError {
-                        case let .httpError(statusCode, data):
-                            print("Status code: \(statusCode)")
-                            print("Response body:", String(data: data, encoding: .utf8) ?? "nil")
-                        default:
-                            print("Другая ошибка:", networkError)
-                        }
-                    } else {
-                        print("Неизвестная ошибка типа:", error)
-                    }
+                    handleError(error, context: "TransactionEditViewModel.saveTransaction")
                 }
             }
         }
@@ -157,9 +147,8 @@ final class TransactionEditViewModel: ObservableObject {
             await MainActor.run {
                 self.categories = categories
             }
-        }
-        catch {
-            print("[TransactionEditViewModel.fetchCategories] - Ошибка загрузки статей: \(error)")
+        } catch {
+            handleError(error, context: "TransactionEditViewModel.fetchCategories")
         }
     }
 
@@ -170,9 +159,15 @@ final class TransactionEditViewModel: ObservableObject {
                 self.bankAccount = account
                 self.currency = account.currency
             }
+        } catch {
+            handleError(error, context: "TransactionEditViewModel.fetchAccount")
         }
-        catch {
-            print("[AccountViewModel.fetchAccount] - Ошибка загрузки счета: \(error)")
+    }
+
+    private func handleError(_ error: Error, context: String) {
+        Task { @MainActor in
+            self.error = (error as? LocalizedError)?.errorDescription ?? "Неизвестная ошибка"
+            print("[\(context)] - Ошибка: \(error)")
         }
     }
 }

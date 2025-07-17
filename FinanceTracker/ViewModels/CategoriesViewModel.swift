@@ -5,6 +5,8 @@ final class CategoriesViewModel: ObservableObject {
     // MARK: - @Published
     @Published private(set) var categories: [Category] = []
     @Published var searchText: String = ""
+    @Published var isLoading: Bool = false
+    @Published var error: String? = nil
 
     // MARK: - Public Properties
     var filteredCategories: [Category] {
@@ -37,6 +39,9 @@ final class CategoriesViewModel: ObservableObject {
 
     // MARK: - Public Methods
     func fetchCategories() async {
+        await MainActor.run { isLoading = true; error = nil }
+        defer { Task { @MainActor in isLoading = false } }
+
         do {
             let categories = try await categoriesService.categories()
             await MainActor.run {
@@ -44,7 +49,10 @@ final class CategoriesViewModel: ObservableObject {
             }
         }
         catch {
-            print("[CategoriesViewModel.fetchCategories] - Ошибка загрузки статей: \(error)")
+            await MainActor.run {
+                self.error = (error as? LocalizedError)?.errorDescription ?? "Неизвестная ошибка"
+                print("[CategoriesViewModel.fetchCategories] - Ошибка загрузки статей: \(error)")
+            }
         }
     }
 
@@ -71,5 +79,12 @@ final class CategoriesViewModel: ObservableObject {
             }
         }
         return dist[a.count][b.count]
+    }
+
+    private func handleError(_ error: Error, context: String) {
+        Task { @MainActor in
+            self.error = (error as? LocalizedError)?.errorDescription ?? "Неизвестная ошибка"
+            print("[\(context)] - Ошибка: \(error)")
+        }
     }
 }

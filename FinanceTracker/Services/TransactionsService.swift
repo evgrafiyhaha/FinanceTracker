@@ -1,11 +1,5 @@
 import Foundation
 
-enum TransactionsServiceError: Error {
-    case notFound
-    case alreadyExists
-    case urlError
-}
-
 final class TransactionsService {
 
     let client = NetworkClient(token: NetworkConstants.token)

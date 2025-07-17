@@ -13,6 +13,8 @@ final class AccountViewModel: ObservableObject {
     @Published var balanceString: String = "0"
     @Published var currency: Currency = .usd
     @Published var state: AccountState = .view
+    @Published var isLoading: Bool = false
+    @Published var error: String? = nil
 
     // MARK: - Private Properties
     private var account: BankAccount?
@@ -33,6 +35,9 @@ final class AccountViewModel: ObservableObject {
     }
 
     func fetchAccount() async {
+        await MainActor.run { isLoading = true; error = nil }
+        defer { Task { @MainActor in isLoading = false } }
+
         do {
             let account = try await accountService.bankAccount()
             await MainActor.run {
@@ -40,9 +45,8 @@ final class AccountViewModel: ObservableObject {
                 self.updateBalance(from: account.balance.formatted())
                 self.currency = account.currency
             }
-        }
-        catch {
-            print("[AccountViewModel.fetchAccount] - Ошибка загрузки счета: \(error)")
+        } catch {
+            handleError(error, context: "AccountViewModel.fetchAccount")
         }
     }
 
@@ -52,12 +56,23 @@ final class AccountViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Private Methods
     private func updateOnServer() async {
+        await MainActor.run { isLoading = true; error = nil }
+        defer { Task { @MainActor in isLoading = false } }
+
         guard let account else { return }
         do {
             try await accountService.updateBalance(old: account, with: balance, for: currency)
         } catch {
-            print("[AccountViewModel.updateBalanceOnServer] - Ошибка обновления баланса: \(error)")
+            handleError(error, context: "AccountViewModel.updateOnServer")
+        }
+    }
+
+    private func handleError(_ error: Error, context: String) {
+        Task { @MainActor in
+            self.error = (error as? LocalizedError)?.errorDescription ?? "Неизвестная ошибка"
+            print("[\(context)] - Ошибка: \(error)")
         }
     }
 }

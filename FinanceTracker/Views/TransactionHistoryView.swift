@@ -93,11 +93,16 @@ struct TransactionHistoryView: View {
                 }
             }
         }
+        .withLoadingAndErrorOverlay(
+                isLoading: viewModel.isLoading,
+                error: viewModel.error,
+                onDismiss: { viewModel.error = nil }
+            )
         .refreshable {
             await viewModel.load()
         }
         .fullScreenCover(item: $selectedTransaction) { transaction in
-            TransactionEditView(transaction, direction: direction)
+            TransactionEditView(transaction, direction: direction, onSave: {await viewModel.load()})
         }
         .task { await viewModel.load() }
         .onChange(of: viewModel.startDate) {

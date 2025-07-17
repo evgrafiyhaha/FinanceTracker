@@ -67,14 +67,19 @@ struct TransactionsListView: View {
             }
         }
         .fullScreenCover(item: $selectedTransaction) { transaction in
-            TransactionEditView(transaction, direction: direction)
+            TransactionEditView(transaction, direction: direction, onSave: {await viewModel.load()})
         }
         .fullScreenCover(isPresented: $isCreatingTransaction) {
-            TransactionEditView(nil, direction: direction)
+            TransactionEditView(nil, direction: direction, onSave: {await viewModel.load()})
         }
         .refreshable {
             await viewModel.load()
         }
+        .withLoadingAndErrorOverlay(
+                isLoading: viewModel.isLoading,
+                error: viewModel.error,
+                onDismiss: { viewModel.error = nil }
+            )
         .task { await viewModel.load() }
     }
 }

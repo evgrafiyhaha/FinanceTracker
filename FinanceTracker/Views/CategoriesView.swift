@@ -17,6 +17,11 @@ struct CategoriesView: View {
             }
             .navigationTitle("Мои статьи")
             .searchable(text: $viewModel.searchText, placement: .navigationBarDrawer(displayMode: .automatic), prompt: "Search")
+            .withLoadingAndErrorOverlay(
+                    isLoading: viewModel.isLoading,
+                    error: viewModel.error,
+                    onDismiss: { viewModel.error = nil }
+                )
         }
         .task { await viewModel.fetchCategories() }
     }

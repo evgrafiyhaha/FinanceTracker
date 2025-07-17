@@ -1,9 +1,5 @@
 import Foundation
 
-enum CategoriesServiceError: Error {
-    case urlError
-}
-
 final class CategoriesService {
 
     private let client = NetworkClient(token: NetworkConstants.token)
