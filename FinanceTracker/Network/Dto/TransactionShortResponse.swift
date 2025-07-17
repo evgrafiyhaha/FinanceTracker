@@ -22,4 +22,20 @@ extension TransactionShortResponse {
         self.createdAt = formatter.string(from: model.createdAt)
         self.updatedAt = formatter.string(from: model.updatedAt)
     }
+    
+    func updated(transaction: Transaction,with formatter: ISO8601DateFormatter) -> Transaction {
+        let createdAtStr = self.createdAt
+        let updatedAtStr = self.updatedAt
+        let transactionDateStr = self.transactionDate
+        return Transaction(
+            id: self.id,
+            account: transaction.account,
+            category: transaction.category,
+            amount: Decimal(string: self.amount) ?? 0,
+            transactionDate: formatter.date(from: transactionDateStr) ?? Date(),
+            comment: self.comment,
+            createdAt: formatter.date(from: createdAtStr) ?? Date(),
+            updatedAt: formatter.date(from: updatedAtStr) ?? Date()
+        )
+    }
 }

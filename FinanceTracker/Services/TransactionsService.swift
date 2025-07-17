@@ -4,6 +4,9 @@ final class TransactionsService {
 
     let client = NetworkClient(token: NetworkConstants.token)
 
+    @MainActor
+    private lazy var storage: TransactionsStorage = SwiftDataTransactionsStorage()
+
     private lazy var formatter: ISO8601DateFormatter = {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
@@ -26,8 +29,9 @@ final class TransactionsService {
         guard let url = components.url else {
             throw NetworkError.invalidResponse
         }
-
-        return try await client.request(url: url, method: .get, responseType: [TransactionResponse].self).map( {Transaction(response: $0, with: formatter)} )
+        let transactions = try await client.request(url: url, method: .get, responseType: [TransactionResponse].self).map( {Transaction(response: $0, with: formatter)} )
+        try await storage.sync(transactions: transactions)
+        return transactions
     }
 
     func add(_ transaction: Transaction) async throws {
@@ -35,7 +39,9 @@ final class TransactionsService {
             throw TransactionsServiceError.urlError
         }
 
-        let _ = try await client.request(url: url, method: .post, requestBody: TransactionRequest(from: transaction,with: formatter), responseType: TransactionShortResponse.self)
+        let short = try await client.request(url: url, method: .post, requestBody: TransactionRequest(from: transaction,with: formatter), responseType: TransactionShortResponse.self)
+        let local = short.updated(transaction: transaction, with: formatter)
+        try await storage.add(local)
     }
 
     func update(withId id: Int, with transaction: Transaction) async throws {
@@ -43,7 +49,8 @@ final class TransactionsService {
             throw TransactionsServiceError.urlError
         }
 
-        let _ = try await client.request(url: url, method: .put, requestBody: TransactionRequest(from: transaction,with: formatter), responseType: TransactionResponse.self)
+        let updated = try await client.request(url: url, method: .put, requestBody: TransactionRequest(from: transaction,with: formatter), responseType: TransactionResponse.self)
+        try await storage.update(.init(response: updated, with: formatter))
     }
 
     func delete(withId id: Int) async throws {
@@ -52,6 +59,8 @@ final class TransactionsService {
         }
 
         let _ = try await client.request(url: url, method: .delete)
+        try await storage.delete(id: id)
     }
 }
+
 
