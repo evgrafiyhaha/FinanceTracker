@@ -5,10 +5,10 @@ final class BankAccountsService {
     let client = NetworkClient(token: NetworkConstants.token)
 
     @MainActor
-    private lazy var storage = SwiftDataBankAccountStorage()
+    private lazy var storage: BankAccountStorage = SwiftDataBankAccountStorage()
 
     @MainActor
-    private lazy var backup = SwiftDataBackupStorage()
+    private lazy var backup: BackupStorage = SwiftDataBackupStorage()
 
     private lazy var formatter: ISO8601DateFormatter = {
         let formatter = ISO8601DateFormatter()

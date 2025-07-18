@@ -5,10 +5,10 @@ final class CategoriesService {
     private let client = NetworkClient(token: NetworkConstants.token)
 
     @MainActor
-    private lazy var storage = SwiftDataCategoriesStorage()
+    private lazy var storage: CategoriesStorage = SwiftDataCategoriesStorage()
 
     @MainActor
-    private lazy var backup = SwiftDataBackupStorage()
+    private lazy var backup: BackupStorage = SwiftDataBackupStorage()
 
     // MARK: - Public Methods
     func categories() async throws -> [Category] {

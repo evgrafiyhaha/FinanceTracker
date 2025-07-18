@@ -8,7 +8,7 @@ final class TransactionsService {
     private lazy var storage: TransactionsStorage = SwiftDataTransactionsStorage()
 
     @MainActor
-    private lazy var backup = SwiftDataBackupStorage()
+    private lazy var backup: BackupStorage = SwiftDataBackupStorage()
 
     private lazy var formatter: ISO8601DateFormatter = {
         let formatter = ISO8601DateFormatter()
@@ -29,7 +29,8 @@ final class TransactionsService {
         }
 
         do {
-            guard var components = URLComponents(string: "\(NetworkConstants.transactionsUrl)/account/119/period") else {
+            let accountId = try await BankAccountsService.shared.bankAccount().id
+            guard var components = URLComponents(string: "\(NetworkConstants.transactionsUrl)/account/\(accountId)/period") else {
                 throw TransactionsServiceError.urlError
             }
 
@@ -74,7 +75,7 @@ final class TransactionsService {
             }
             try await storage.add(local)
         } catch {
-            try await backup.add(transaction: transaction, for: .add)
+            try await backup.add(transaction: transaction, transactionId: nil, for: .add)
         }
     }
 
@@ -88,7 +89,7 @@ final class TransactionsService {
             try await storage.update(.init(response: updated, with: formatter))
         } catch {
             try await storage.update(transaction)
-            try await backup.add(transaction: transaction, for: .update)
+            try await backup.add(transaction: transaction, transactionId: nil, for: .update)
         }
     }
 

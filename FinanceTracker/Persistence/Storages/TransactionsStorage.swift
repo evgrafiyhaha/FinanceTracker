@@ -1,3 +1,4 @@
+@MainActor
 protocol TransactionsStorage {
     func transactions() async throws -> [Transaction]
     func update(_ transaction: Transaction) async throws

@@ -10,7 +10,6 @@ extension BankAccountRequest {
     init(from model: BankAccount) {
         self.name = model.name
         self.balance = String(format: "%.2f", NSDecimalNumber(decimal: model.balance).doubleValue)
-        print(self.balance,model.balance)
         self.currency = model.currency.rawValue
     }
 }

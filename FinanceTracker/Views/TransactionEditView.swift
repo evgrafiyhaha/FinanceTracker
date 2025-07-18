@@ -2,6 +2,7 @@ import SwiftUI
 
 struct TransactionEditView: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var appState: AppState
     var onSave: (() async -> Void)
     var direction: Direction
     @FocusState private var isAmountFocused: Bool
@@ -73,7 +74,10 @@ struct TransactionEditView: View {
                 error: viewModel.error,
                 onDismiss: { viewModel.error = nil }
             )
-        .task { await viewModel.loadData() }
+        .task {
+            viewModel.appState = appState
+            await viewModel.loadData()
+        }
     }
     @ViewBuilder
     var editList: some View {

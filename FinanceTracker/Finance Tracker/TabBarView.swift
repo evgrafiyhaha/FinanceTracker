@@ -4,14 +4,16 @@ struct TabBarView: View {
     @EnvironmentObject var appState: AppState
 
     var body: some View {
-        VStack {
-//            if appState.isOffline {
-//                Text("Offline mode")
-//                    .foregroundColor(.white)
-//                    .frame(maxWidth: .infinity)
-//                    .background(Color.red)
-//                    .transition(.move(edge: .top))
-//            }
+        VStack(spacing: 0) { // убираем отступы между элементами
+            if appState.isOffline {
+                Text("Offline mode")
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(8)
+                    .background(Color.red)
+                    .transition(.move(edge: .top))
+            }
+
             TabView {
                 TransactionsListView(direction: .outcome)
                     .tabItem {
@@ -43,9 +45,9 @@ struct TabBarView: View {
                         Text("Настройки")
                     }
             }
+            .frame(maxHeight: .infinity)  // вот ключ — заставляем TabView занять оставшееся место
         }
         .animation(.easeInOut, value: appState.isOffline)
-
     }
 }
 

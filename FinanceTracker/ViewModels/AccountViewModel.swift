@@ -16,6 +16,8 @@ final class AccountViewModel: ObservableObject {
     @Published var isLoading: Bool = false
     @Published var error: String? = nil
 
+    weak var appState: AppState?
+
     // MARK: - Private Properties
     private var account: BankAccount?
     private let accountService = BankAccountsService.shared

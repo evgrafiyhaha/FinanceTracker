@@ -2,7 +2,7 @@ import SwiftData
 import Foundation
 
 @MainActor
-final class SwiftDataCategoriesStorage {
+final class SwiftDataCategoriesStorage: CategoriesStorage {
     private let context: ModelContext = SwiftDataStorage.shared.context
 
     func categories() async throws -> [Category] {
@@ -16,7 +16,7 @@ final class SwiftDataCategoriesStorage {
         }
     }
 
-    func add(_ category: Category) async throws {
+    private func add(_ category: Category) async throws {
         let model = CategoryModel(from: category)
         context.insert(model)
         try context.save()

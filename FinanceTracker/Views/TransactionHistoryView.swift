@@ -3,6 +3,7 @@ import SwiftUI
 
 struct TransactionHistoryView: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var appState: AppState
     var direction: Direction
     @StateObject var viewModel: TransactionHistoryViewModel
     @State private var selectedTransaction: Transaction? = nil
@@ -104,7 +105,10 @@ struct TransactionHistoryView: View {
         .fullScreenCover(item: $selectedTransaction) { transaction in
             TransactionEditView(transaction, direction: direction, onSave: {await viewModel.load()})
         }
-        .task { await viewModel.load() }
+        .task {
+            viewModel.appState = appState
+            await viewModel.load()
+        }
         .onChange(of: viewModel.startDate) {
             viewModel.changeDatePeriod()
         }

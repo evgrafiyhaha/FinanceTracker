@@ -2,18 +2,12 @@ import SwiftData
 import Foundation
 
 @MainActor
-final class SwiftDataBackupStorage {
+final class SwiftDataBackupStorage: BackupStorage {
     private let context: ModelContext = SwiftDataStorage.shared.context
 
     func pendingTransactions() async throws -> [PendingTransaction] {
         try context.fetch(FetchDescriptor<PendingTransactionModel>())
             .map { $0.toDomain() }
-    }
-
-    func add(_ pendingTransaction: PendingTransaction) async throws {
-        let model = try PendingTransactionModel(from: pendingTransaction, in: context)
-        context.insert(model)
-        try context.save()
     }
 
     func delete(id: Int) async throws {
@@ -50,5 +44,11 @@ final class SwiftDataBackupStorage {
     private func nextId() throws -> Int {
         let existing = try context.fetch(FetchDescriptor<PendingTransactionModel>())
         return (existing.map { $0.id }.max() ?? 0) + 1
+    }
+
+    private func add(_ pendingTransaction: PendingTransaction) async throws {
+        let model = try PendingTransactionModel(from: pendingTransaction, in: context)
+        context.insert(model)
+        try context.save()
     }
 }

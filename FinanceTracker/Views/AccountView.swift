@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct AccountView: View {
+    @EnvironmentObject var appState: AppState
     @StateObject var viewModel = AccountViewModel()
     @State private var isPresented = false
     @FocusState private var isAmountFocused: Bool
@@ -36,6 +37,7 @@ struct AccountView: View {
         }
         .animation(.easeInOut, value: viewModel.state)
         .task {
+            viewModel.appState = appState
             await viewModel.fetchAccount()
         }
     }

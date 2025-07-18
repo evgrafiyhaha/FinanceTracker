@@ -22,6 +22,7 @@ final class TransactionEditViewModel: ObservableObject {
 
     // MARK: - Public Properties
     let state: TransactionEditState
+    weak var appState: AppState?
 
     // MARK: - Private Properties
     private var transaction: Transaction?
@@ -140,6 +141,7 @@ final class TransactionEditViewModel: ObservableObject {
         do {
             let categories = try await categoriesService.categories(withDirection: direction)
             await MainActor.run {
+                self.appState?.isOffline = false
                 self.categories = categories
             }
         } catch {
@@ -151,6 +153,7 @@ final class TransactionEditViewModel: ObservableObject {
         do {
             let account = try await accountService.bankAccount()
             await MainActor.run {
+                self.appState?.isOffline = false
                 self.bankAccount = account
                 self.currency = account.currency
             }
@@ -162,6 +165,7 @@ final class TransactionEditViewModel: ObservableObject {
     private func handleError(_ error: Error, context: String) {
         Task { @MainActor in
             var description = ""
+            self.appState?.isOffline = true
             switch error {
             case CategoriesServiceError.networkFallback(let categories, let nestedError):
                 self.categories = categories

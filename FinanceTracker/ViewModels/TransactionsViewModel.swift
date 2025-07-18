@@ -10,11 +10,12 @@ final class TransactionsViewModel: ObservableObject {
     @Published var isLoading: Bool = false
     @Published var error: String? = nil
 
+    weak var appState: AppState?
+
     // MARK: - Private Properties
     private let direction: Direction
     private let transactionsService = TransactionsService.shared
     private let accountService = BankAccountsService.shared
-    weak var appState: AppState?
 
     // MARK: - init
     init(direction: Direction) {

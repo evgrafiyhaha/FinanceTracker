@@ -2,7 +2,7 @@ import SwiftData
 import Foundation
 
 @MainActor
-final class SwiftDataBankAccountStorage {
+final class SwiftDataBankAccountStorage: BankAccountStorage {
     private let context: ModelContext = SwiftDataStorage.shared.context
 
     func account() async throws -> BankAccount {

@@ -43,6 +43,8 @@ final class TransactionHistoryViewModel: ObservableObject {
         }
     }
 
+    weak var appState: AppState?
+
     // MARK: - Private Properties
     private let direction: Direction
     private let transactionsService = TransactionsService.shared
@@ -90,6 +92,7 @@ final class TransactionHistoryViewModel: ObservableObject {
         do {
             let account = try await accountService.bankAccount()
             await MainActor.run {
+                self.appState?.isOffline = false
                 self.bankAccount = account
                 self.recalculateSum()
             }
@@ -111,6 +114,7 @@ final class TransactionHistoryViewModel: ObservableObject {
             let filtered = all.filter { $0.category.direction == direction }
 
             await MainActor.run {
+                self.appState?.isOffline = false
                 self.transactions = filtered
                 self.applySort()
                 self.recalculateSum()
@@ -123,6 +127,7 @@ final class TransactionHistoryViewModel: ObservableObject {
     private func handleError(_ error: Error, context: String) {
         Task { @MainActor in
             var description = ""
+            self.appState?.isOffline = true
             switch error {
             case TransactionsServiceError.networkFallback(let transactions, let nestedError):
                 self.transactions = transactions

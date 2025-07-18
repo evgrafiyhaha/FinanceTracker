@@ -6,8 +6,6 @@ final class SwiftDataTransactionsStorage: TransactionsStorage {
     
     private let context: ModelContext = SwiftDataStorage.shared.context
 
-    init() {}
-
     func sync(transactions: [Transaction]) async throws {
         for transaction in transactions {
             try await add(transaction)

@@ -9,6 +9,7 @@ final class CategoriesViewModel: ObservableObject {
     @Published var error: String? = nil
 
     // MARK: - Public Properties
+    weak var appState: AppState?
     var filteredCategories: [Category] {
         guard !searchText.isEmpty else { return categories }
 
@@ -45,6 +46,7 @@ final class CategoriesViewModel: ObservableObject {
         do {
             let categories = try await categoriesService.categories()
             await MainActor.run {
+                self.appState?.isOffline = false
                 self.categories = categories
             }
         } catch {
@@ -80,6 +82,7 @@ final class CategoriesViewModel: ObservableObject {
     private func handleError(_ error: Error, context: String) {
         Task { @MainActor in
             var description = ""
+            self.appState?.isOffline = true
             switch error {
             case CategoriesServiceError.networkFallback(let categories, let nestedError):
                 self.categories = categories
