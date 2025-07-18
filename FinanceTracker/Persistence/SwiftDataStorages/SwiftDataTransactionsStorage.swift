@@ -4,17 +4,10 @@ import Foundation
 @MainActor
 final class SwiftDataTransactionsStorage: TransactionsStorage {
     
-    private let container: ModelContainer
-    private let context: ModelContext
+    private let context: ModelContext = SwiftDataStorage.shared.context
 
-    init() {
-        let schema = Schema([TransactionModel.self])
-        self.container = try! ModelContainer(for: schema)
-        self.context = container.mainContext
-        Task {
-            dump(try! await transactions())
-        }
-    }
+    init() {}
+
     func sync(transactions: [Transaction]) async throws {
         for transaction in transactions {
             try await add(transaction)

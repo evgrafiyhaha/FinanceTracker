@@ -47,12 +47,8 @@ final class CategoriesViewModel: ObservableObject {
             await MainActor.run {
                 self.categories = categories
             }
-        }
-        catch {
-            await MainActor.run {
-                self.error = (error as? LocalizedError)?.errorDescription ?? "Неизвестная ошибка"
-                print("[CategoriesViewModel.fetchCategories] - Ошибка загрузки статей: \(error)")
-            }
+        } catch {
+            handleError(error, context: "CategoriesViewModel.fetchCategories")
         }
     }
 
@@ -83,7 +79,15 @@ final class CategoriesViewModel: ObservableObject {
 
     private func handleError(_ error: Error, context: String) {
         Task { @MainActor in
-            self.error = (error as? LocalizedError)?.errorDescription ?? "Неизвестная ошибка"
+            var description = ""
+            switch error {
+            case CategoriesServiceError.networkFallback(let categories, let nestedError):
+                self.categories = categories
+                description = (nestedError as? LocalizedError)?.errorDescription ?? "Ошибка сети: данные могут быть неактуальными"
+            default:
+                description = (error as? LocalizedError)?.errorDescription ?? "Неизвестная ошибка"
+            }
+            self.error = description
             print("[\(context)] - Ошибка: \(error)")
         }
     }

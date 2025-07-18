@@ -166,7 +166,19 @@ final class TransactionEditViewModel: ObservableObject {
 
     private func handleError(_ error: Error, context: String) {
         Task { @MainActor in
-            self.error = (error as? LocalizedError)?.errorDescription ?? "Неизвестная ошибка"
+            var description = ""
+            switch error {
+            case CategoriesServiceError.networkFallback(let categories, let nestedError):
+                self.categories = categories
+                description = (nestedError as? LocalizedError)?.errorDescription ?? "Ошибка сети: данные могут быть неактуальными"
+            case BankAccountsServiceError.networkFallback(let account, let nestedError):
+                self.bankAccount = account
+                self.currency = account.currency
+                description = (nestedError as? LocalizedError)?.errorDescription ?? "Ошибка сети: данные могут быть неактуальными"
+            default:
+                description = (error as? LocalizedError)?.errorDescription ?? "Неизвестная ошибка"
+            }
+            self.error = description
             print("[\(context)] - Ошибка: \(error)")
         }
     }

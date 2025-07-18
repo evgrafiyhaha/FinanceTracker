@@ -4,6 +4,12 @@ final class BankAccountsService {
 
     let client = NetworkClient(token: NetworkConstants.token)
 
+    @MainActor
+    private lazy var storage = SwiftDataBankAccountStorage()
+
+    @MainActor
+    private lazy var backup = SwiftDataBackupStorage()
+
     private lazy var formatter: ISO8601DateFormatter = {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [
@@ -19,17 +25,23 @@ final class BankAccountsService {
 
     // MARK: - Public Methods
     func bankAccount() async throws -> BankAccount {
-        guard let url = URL(string: NetworkConstants.accountsUrl)
-        else {
-            throw BankAccountsServiceError.urlError
-        }
-        let accounts = try await client.request(url: url, method: .get, responseType: [BankAccountResponse].self)
-        guard let first = accounts.first else {
-            throw BankAccountsServiceError.notFound
-        }
+        do {
+            guard let url = URL(string: NetworkConstants.accountsUrl)
+            else {
+                throw BankAccountsServiceError.urlError
+            }
+            let accounts = try await client.request(url: url, method: .get, responseType: [BankAccountResponse].self)
+            guard let first = accounts.first else {
+                throw BankAccountsServiceError.notFound
+            }
 
-        let account = BankAccount(response: first, with: formatter)
-        return account
+            let account = BankAccount(response: first, with: formatter)
+            return account
+        } catch {
+            print("[BankAccountsService.bankAccount] - Fetch failed: \(error)")
+            let local = try await storage.account()
+            throw BankAccountsServiceError.networkFallback(local, error)
+        }
     }
 
     func updateBalance(old account: BankAccount, with value: Decimal, for currency: Currency) async throws {

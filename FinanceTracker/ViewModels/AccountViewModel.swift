@@ -71,7 +71,17 @@ final class AccountViewModel: ObservableObject {
 
     private func handleError(_ error: Error, context: String) {
         Task { @MainActor in
-            self.error = (error as? LocalizedError)?.errorDescription ?? "Неизвестная ошибка"
+            var description = ""
+            switch error {
+            case BankAccountsServiceError.networkFallback(let account, let nestedError):
+                self.account = account
+                self.currency = account.currency
+                self.updateBalance(from: account.balance.formatted())
+                description = (nestedError as? LocalizedError)?.errorDescription ?? "Ошибка сети: данные могут быть неактуальными"
+            default:
+                description = (error as? LocalizedError)?.errorDescription ?? "Неизвестная ошибка"
+            }
+            self.error = description
             print("[\(context)] - Ошибка: \(error)")
         }
     }

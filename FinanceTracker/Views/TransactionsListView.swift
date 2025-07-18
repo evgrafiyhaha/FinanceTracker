@@ -2,9 +2,11 @@ import SwiftUI
 
 struct TransactionsListView: View {
     var direction: Direction
+    @EnvironmentObject var appState: AppState
     @StateObject var viewModel:TransactionsViewModel
     @State private var selectedTransaction: Transaction? = nil
     @State private var isCreatingTransaction = false
+
 
     init(direction: Direction) {
         self.direction = direction
@@ -80,7 +82,10 @@ struct TransactionsListView: View {
                 error: viewModel.error,
                 onDismiss: { viewModel.error = nil }
             )
-        .task { await viewModel.load() }
+        .task {
+            viewModel.appState = appState
+            await viewModel.load()
+        }
     }
 }
 

@@ -14,6 +14,7 @@ final class TransactionsViewModel: ObservableObject {
     private let direction: Direction
     private let transactionsService = TransactionsService.shared
     private let accountService = BankAccountsService.shared
+    weak var appState: AppState?
 
     // MARK: - init
     init(direction: Direction) {
@@ -43,6 +44,7 @@ final class TransactionsViewModel: ObservableObject {
             let filtered = all.filter { $0.category.direction == direction }
 
             await MainActor.run {
+                self.appState?.isOffline = false
                 self.transactions = filtered
                 self.recalculateSum()
             }
@@ -55,6 +57,7 @@ final class TransactionsViewModel: ObservableObject {
         do {
             let account = try await accountService.bankAccount()
             await MainActor.run {
+                self.appState?.isOffline = false
                 self.bankAccount = account
                 self.recalculateSum()
             }
@@ -69,7 +72,22 @@ final class TransactionsViewModel: ObservableObject {
 
     private func handleError(_ error: Error, context: String) {
         Task { @MainActor in
-            self.error = (error as? LocalizedError)?.errorDescription ?? "Неизвестная ошибка"
+            var description = ""
+            switch error {
+            case TransactionsServiceError.networkFallback(let transactions, let nestedError):
+                self.appState?.isOffline = true
+                self.transactions = transactions
+                self.recalculateSum()
+                description = (nestedError as? LocalizedError)?.errorDescription ?? "Ошибка сети: данные могут быть неактуальными"
+            case BankAccountsServiceError.networkFallback(let account, let nestedError):
+                self.appState?.isOffline = true
+                self.bankAccount = account
+                self.recalculateSum()
+                description = (nestedError as? LocalizedError)?.errorDescription ?? "Ошибка сети: данные могут быть неактуальными"
+            default:
+                description = (error as? LocalizedError)?.errorDescription ?? "Неизвестная ошибка"
+            }
+            self.error = description
             print("[\(context)] - Ошибка: \(error)")
         }
     }
