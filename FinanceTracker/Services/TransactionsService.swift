@@ -49,7 +49,7 @@ final class TransactionsService {
             try await storage.sync(transactions: transactions)
             return transactions.filter {
                 $0.transactionDate >= from && $0.transactionDate <= to
-            }//почему
+            }
 
         } catch {
             print("[TransactionsService.transactions] - Fetch failed: \(error)")
@@ -61,32 +61,49 @@ final class TransactionsService {
         }
     }
 
-    func add(_ transaction: Transaction) async throws {
-        guard let url = URL(string: NetworkConstants.transactionsUrl) else {
-            throw TransactionsServiceError.urlError
-        }
+    func add(_ transaction: Transaction,localCopyId id: Int? = nil) async throws {
+        do {
+            guard let url = URL(string: NetworkConstants.transactionsUrl) else {
+                throw TransactionsServiceError.urlError
+            }
 
-        let short = try await client.request(url: url, method: .post, requestBody: TransactionRequest(from: transaction,with: formatter), responseType: TransactionShortResponse.self)
-        let local = short.updated(transaction: transaction, with: formatter)
-        try await storage.add(local)
+            let short = try await client.request(url: url, method: .post, requestBody: TransactionRequest(from: transaction,with: formatter), responseType: TransactionShortResponse.self)
+            let local = short.updated(transaction: transaction, with: formatter)
+            if let id {
+                try await storage.delete(id: id)
+            }
+            try await storage.add(local)
+        } catch {
+            try await backup.add(transaction: transaction, for: .add)
+        }
     }
 
     func update(withId id: Int, with transaction: Transaction) async throws {
-        guard let url = URL(string: "\(NetworkConstants.transactionsUrl)/\(id)") else {
-            throw TransactionsServiceError.urlError
-        }
+        do {
+            guard let url = URL(string: "\(NetworkConstants.transactionsUrl)/\(id)") else {
+                throw TransactionsServiceError.urlError
+            }
 
-        let updated = try await client.request(url: url, method: .put, requestBody: TransactionRequest(from: transaction,with: formatter), responseType: TransactionResponse.self)
-        try await storage.update(.init(response: updated, with: formatter))
+            let updated = try await client.request(url: url, method: .put, requestBody: TransactionRequest(from: transaction,with: formatter), responseType: TransactionResponse.self)
+            try await storage.update(.init(response: updated, with: formatter))
+        } catch {
+            try await storage.update(transaction)
+            try await backup.add(transaction: transaction, for: .update)
+        }
     }
 
     func delete(withId id: Int) async throws {
-        guard let url = URL(string: "\(NetworkConstants.transactionsUrl)/\(id)") else {
-            throw TransactionsServiceError.urlError
-        }
+        do {
+            guard let url = URL(string: "\(NetworkConstants.transactionsUrl)/\(id)") else {
+                throw TransactionsServiceError.urlError
+            }
 
-        let _ = try await client.request(url: url, method: .delete)
-        try await storage.delete(id: id)
+            let _ = try await client.request(url: url, method: .delete)
+            try await storage.delete(id: id)
+        } catch {
+            try await storage.delete(id: id)
+            try await backup.add(transaction: nil, transactionId: id, for: .delete)
+        }
     }
 
     func syncBackupToServer() async throws {
@@ -97,11 +114,13 @@ final class TransactionsService {
             do {
                 switch pending.operation {
                 case .add:
-                    try await add(pending.transaction)
-                case .delete:
-                    try await update(withId: pending.transaction.id, with: pending.transaction)
+                    guard let transaction = pending.transaction else { break }
+                    try await add(transaction,localCopyId: transaction.id)
                 case .update:
-                    try await delete(withId: pending.transaction.id)
+                    guard let transaction = pending.transaction else { break }
+                    try await update(withId: transaction.id, with: transaction)
+                case .delete:
+                    try await delete(withId: pending.transactionId)
                 }
                 syncedIDs.append(pending.id)
             } catch {
@@ -114,5 +133,3 @@ final class TransactionsService {
         }
     }
 }
-
-

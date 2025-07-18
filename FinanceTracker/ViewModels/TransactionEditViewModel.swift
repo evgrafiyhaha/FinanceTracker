@@ -60,12 +60,10 @@ final class TransactionEditViewModel: ObservableObject {
         defer { Task { @MainActor in isLoading = false } }
 
         guard let transaction else { return }
-        Task {
-            do {
-                try await transactionsService.delete(withId: transaction.id)
-            } catch {
-                handleError(error, context: "TransactionEditViewModel.deleteTransaction")
-            }
+        do {
+            try await transactionsService.delete(withId: transaction.id)
+        } catch {
+            handleError(error, context: "TransactionEditViewModel.deleteTransaction")
         }
     }
 
@@ -82,47 +80,44 @@ final class TransactionEditViewModel: ObservableObject {
         }
         switch state {
         case .create:
-            Task {
-                do {
-                    try await transactionsService.add(
-                        Transaction(
-                            id: -1,
-                            account: bankAccount,
-                            category: category,
-                            amount: amount,
-                            transactionDate: transactionDate,
-                            comment: comment == "" ? nil : comment,
-                            createdAt: Date(),
-                            updatedAt: Date()
-                        )
-                    )
-                } catch {
-                    handleError(error, context: "TransactionEditViewModel.saveTransaction")
-                }
-            }
-        case .edit:
-            guard let transaction else {
-                return
-            }
-            Task {
-                do {
-                    let updated = Transaction(
-                        id: transaction.id,
+            do {
+                let tempId = Int(Date().timeIntervalSince1970 * 1000) * -1
+                try await transactionsService.add(
+                    Transaction(
+                        id: tempId,
                         account: bankAccount,
                         category: category,
                         amount: amount,
                         transactionDate: transactionDate,
                         comment: comment == "" ? nil : comment,
-                        createdAt: transaction.createdAt,
+                        createdAt: Date(),
                         updatedAt: Date()
                     )
-                    try await transactionsService.update(
-                        withId: transaction.id,
-                        with: updated
-                    )
-                } catch {
-                    handleError(error, context: "TransactionEditViewModel.saveTransaction")
-                }
+                )
+            } catch {
+                handleError(error, context: "TransactionEditViewModel.saveTransaction")
+            }
+        case .edit:
+            guard let transaction else {
+                return
+            }
+            do {
+                let updated = Transaction(
+                    id: transaction.id,
+                    account: bankAccount,
+                    category: category,
+                    amount: amount,
+                    transactionDate: transactionDate,
+                    comment: comment == "" ? nil : comment,
+                    createdAt: transaction.createdAt,
+                    updatedAt: Date()
+                )
+                try await transactionsService.update(
+                    withId: transaction.id,
+                    with: updated
+                )
+            } catch {
+                handleError(error, context: "TransactionEditViewModel.saveTransaction")
             }
         }
     }
