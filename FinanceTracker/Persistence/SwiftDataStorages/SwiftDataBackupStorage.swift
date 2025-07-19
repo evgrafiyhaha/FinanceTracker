@@ -20,7 +20,7 @@ final class SwiftDataBackupStorage: BackupStorage {
         }
     }
 
-    func add(transaction: Transaction?, transactionId: Int? = nil, for operation: BackupOperation) async throws {
+    func add(transaction: Transaction?, transactionId: Int? = nil, for operation: BackupTransactionOperation) async throws {
         let newId = try nextId()
 
         if operation == .delete, let transactionId = transactionId {
