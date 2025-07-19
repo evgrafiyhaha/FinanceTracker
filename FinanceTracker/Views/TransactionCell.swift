@@ -8,6 +8,7 @@ enum TransactionCellContext {
 struct TransactionCell: View {
     var transaction: Transaction
     var context: TransactionCellContext
+    var currency: Currency
 
     var body: some View {
         HStack {
@@ -23,7 +24,7 @@ struct TransactionCell: View {
             }
             Spacer()
             VStack(alignment: .trailing) {
-                Text("\(transaction.amount.formatted()) \(transaction.account.currency.symbol)")
+                Text("\(transaction.amount.formatted()) \(currency.symbol)")
                 if context == .history {
                     Text(transaction.transactionDate.formatted(date: .omitted, time: .shortened))
                 }

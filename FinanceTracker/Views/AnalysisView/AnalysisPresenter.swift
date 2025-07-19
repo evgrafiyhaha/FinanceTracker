@@ -51,42 +51,70 @@ final class AnalysisPresenter: AnalysisPresenterProtocol {
     // MARK: - Public Methods
     func load() {
         Task {
-            await fetchTransactions()
+            await MainActor.run { view?.showLoader() }
+
+            var errorDescription: String?
+
             do {
-                let account = try await accountService.bankAccount()
+                try await fetchTransactions()
+            } catch let TransactionsServiceError.networkFallback(transactions, nestedError) {
+                self.transactions = transactions
+                self.recalculateSum()
                 await MainActor.run {
-                    self.bankAccount = account
-                    self.recalculateSum()
+                    self.view?.reloadTransactionTableView()
                     self.view?.reloadPickerTableView()
                 }
+                errorDescription = (nestedError as? LocalizedError)?.errorDescription ?? "Ошибка сети при загрузке операций. Данные могут быть неактуальны."
+            } catch {
+                errorDescription = (error as? LocalizedError)?.errorDescription ?? "Не удалось загрузить операции"
             }
-            catch {
-                print("[AnalysisPresenter.load] - Ошибка загрузки счета: \(error)")
+
+            do {
+                let account = try await accountService.bankAccount()
+                self.bankAccount = account
+                self.recalculateSum()
+                await MainActor.run {
+                    self.view?.reloadPickerTableView()
+                }
+            } catch let BankAccountsServiceError.networkFallback(account, nestedError) {
+                self.bankAccount = account
+                self.recalculateSum()
+                await MainActor.run {
+                    self.view?.reloadPickerTableView()
+                }
+                errorDescription = (nestedError as? LocalizedError)?.errorDescription ?? "Ошибка сети при загрузке счёта. Данные могут быть неактуальны."
+            } catch {
+                errorDescription = (error as? LocalizedError)?.errorDescription ?? "Не удалось загрузить счёт"
+            }
+
+            guard let errorDescription else {
+                await MainActor.run {
+                    view?.hideLoader()
+                }
+                return
+            }
+            await MainActor.run {
+                self.view?.hideLoader()
+                self.view?.showError(errorDescription)
             }
         }
     }
 
     // MARK: - Private Methods
-    private func fetchTransactions() async {
+    private func fetchTransactions() async throws {
         let calendar = Calendar.current
         let startOfDay = calendar.startOfDay(for: startDate)
-        guard let endOfDay = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: endDate) else {
-            return
-        }
-        do {
-            let all = try await transactionsService.transactions(from: startOfDay, to: endOfDay)
-            let filtered = all.filter { $0.category.direction == direction }
+        guard let endOfDay = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: endDate) else { return }
 
-            await MainActor.run {
-                self.transactions = filtered
-                self.applySort()
-                self.recalculateSum()
-                self.view?.reloadTransactionTableView()
-                self.view?.reloadPickerTableView()
+        let all = try await transactionsService.transactions(from: startOfDay, to: endOfDay)
+        let filtered = all.filter { $0.category.direction == direction }
 
-            }
-        } catch {
-            print("[AnalysisPresenter.fetchTransactions] - Ошибка загрузки транзакций: \(error)")
+        await MainActor.run {
+            self.transactions = filtered
+            self.applySort()
+            self.recalculateSum()
+            self.view?.reloadTransactionTableView()
+            self.view?.reloadPickerTableView()
         }
     }
 

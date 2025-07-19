@@ -3,6 +3,7 @@ import SwiftUI
 
 struct TransactionHistoryView: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var appState: AppState
     var direction: Direction
     @StateObject var viewModel: TransactionHistoryViewModel
     @State private var selectedTransaction: Transaction? = nil
@@ -59,7 +60,8 @@ struct TransactionHistoryView: View {
                             } label: {
                                 TransactionCell(
                                     transaction: transaction,
-                                    context: .history
+                                    context: .history,
+                                    currency: viewModel.bankAccount?.currency ?? .usd
                                 )
                                 .contentShape(Rectangle())
                                 .padding(4)
@@ -92,13 +94,21 @@ struct TransactionHistoryView: View {
                 }
             }
         }
+        .withLoadingAndErrorOverlay(
+                isLoading: viewModel.isLoading,
+                error: viewModel.error,
+                onDismiss: { viewModel.error = nil }
+            )
         .refreshable {
             await viewModel.load()
         }
         .fullScreenCover(item: $selectedTransaction) { transaction in
-            TransactionEditView(transaction, direction: direction)
+            TransactionEditView(transaction, direction: direction, onSave: {await viewModel.load()})
         }
-        .task { await viewModel.load() }
+        .task {
+            viewModel.appState = appState
+            await viewModel.load()
+        }
         .onChange(of: viewModel.startDate) {
             viewModel.changeDatePeriod()
         }

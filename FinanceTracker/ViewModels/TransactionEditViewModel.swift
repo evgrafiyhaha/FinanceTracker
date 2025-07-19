@@ -16,10 +16,13 @@ final class TransactionEditViewModel: ObservableObject {
     @Published private(set) var categories: [Category] = []
     @Published var amountString: String = ""
     @Published private(set) var currency: Currency = .usd
+    @Published var isLoading: Bool = false
+    @Published var error: String? = nil
     private var bankAccount: BankAccount?
 
     // MARK: - Public Properties
     let state: TransactionEditState
+    weak var appState: AppState?
 
     // MARK: - Private Properties
     private var transaction: Transaction?
@@ -46,22 +49,29 @@ final class TransactionEditViewModel: ObservableObject {
 
     // MARK: - Public Methods
     func loadData() async {
+        await MainActor.run { isLoading = true; error = nil }
+        defer { Task { @MainActor in isLoading = false } }
+
         await fetchCategories()
         await fetchAccount()
     }
 
-    func deleteTransaction()  {
+    func deleteTransaction()  async {
+        await MainActor.run { isLoading = true; error = nil }
+        defer { Task { @MainActor in isLoading = false } }
+
         guard let transaction else { return }
-        Task {
-            do {
-                try await transactionsService.delete(withId: transaction.id)
-            } catch {
-                print("[TransactionEditViewModel.deleteTransaction] - Ошибка удаления операции: \(error)")
-            }
+        do {
+            try await transactionsService.delete(withId: transaction.id)
+        } catch {
+            handleError(error, context: "TransactionEditViewModel.deleteTransaction")
         }
     }
 
-    func saveTransaction() {
+    func saveTransaction() async {
+        await MainActor.run { isLoading = true; error = nil }
+        defer { Task { @MainActor in isLoading = false } }
+
         guard
             let category,
             let amount,
@@ -71,48 +81,44 @@ final class TransactionEditViewModel: ObservableObject {
         }
         switch state {
         case .create:
-            Task {
-                do {
-                    let lastIndex = try await transactionsService.transactions().count
-                    try await transactionsService.add(
-                        Transaction(
-                            id: lastIndex,
-                            account: bankAccount,
-                            category: category,
-                            amount: amount,
-                            transactionDate: transactionDate,
-                            comment: comment == "" ? nil : comment,
-                            createdAt: Date(),
-                            updatedAt: Date()
-                        )
-                    )
-                } catch {
-                    print("[TransactionEditViewModel.saveTransaction] - Ошибка создания операции: \(error)")
-                }
-            }
-        case .edit:
-            guard let transaction else {
-                return
-            }
-            Task {
-                do {
-                    let updated = Transaction(
-                        id: transaction.id,
+            do {
+                let tempId = Int(Date().timeIntervalSince1970 * 1000) * -1
+                try await transactionsService.add(
+                    Transaction(
+                        id: tempId,
                         account: bankAccount,
                         category: category,
                         amount: amount,
                         transactionDate: transactionDate,
                         comment: comment == "" ? nil : comment,
-                        createdAt: transaction.createdAt,
+                        createdAt: Date(),
                         updatedAt: Date()
                     )
-                    try await transactionsService.update(
-                        withId: transaction.id,
-                        with: updated
-                    )
-                } catch {
-                    print("[TransactionEditViewModel.saveTransaction] - Ошибка обновлении операции: \(error)")
-                }
+                )
+            } catch {
+                handleError(error, context: "TransactionEditViewModel.saveTransaction")
+            }
+        case .edit:
+            guard let transaction else {
+                return
+            }
+            do {
+                let updated = Transaction(
+                    id: transaction.id,
+                    account: bankAccount,
+                    category: category,
+                    amount: amount,
+                    transactionDate: transactionDate,
+                    comment: comment == "" ? nil : comment,
+                    createdAt: transaction.createdAt,
+                    updatedAt: Date()
+                )
+                try await transactionsService.update(
+                    withId: transaction.id,
+                    with: updated
+                )
+            } catch {
+                handleError(error, context: "TransactionEditViewModel.saveTransaction")
             }
         }
     }
@@ -135,11 +141,11 @@ final class TransactionEditViewModel: ObservableObject {
         do {
             let categories = try await categoriesService.categories(withDirection: direction)
             await MainActor.run {
+                self.appState?.isOffline = false
                 self.categories = categories
             }
-        }
-        catch {
-            print("[TransactionEditViewModel.fetchCategories] - Ошибка загрузки статей: \(error)")
+        } catch {
+            handleError(error, context: "TransactionEditViewModel.fetchCategories")
         }
     }
 
@@ -147,12 +153,32 @@ final class TransactionEditViewModel: ObservableObject {
         do {
             let account = try await accountService.bankAccount()
             await MainActor.run {
+                self.appState?.isOffline = false
                 self.bankAccount = account
                 self.currency = account.currency
             }
+        } catch {
+            handleError(error, context: "TransactionEditViewModel.fetchAccount")
         }
-        catch {
-            print("[AccountViewModel.fetchAccount] - Ошибка загрузки счета: \(error)")
+    }
+
+    private func handleError(_ error: Error, context: String) {
+        Task { @MainActor in
+            var description = ""
+            self.appState?.isOffline = true
+            switch error {
+            case CategoriesServiceError.networkFallback(let categories, let nestedError):
+                self.categories = categories
+                description = (nestedError as? LocalizedError)?.errorDescription ?? "Ошибка сети: данные могут быть неактуальными"
+            case BankAccountsServiceError.networkFallback(let account, let nestedError):
+                self.bankAccount = account
+                self.currency = account.currency
+                description = (nestedError as? LocalizedError)?.errorDescription ?? "Ошибка сети: данные могут быть неактуальными"
+            default:
+                description = (error as? LocalizedError)?.errorDescription ?? "Неизвестная ошибка"
+            }
+            self.error = description
+            print("[\(context)] - Ошибка: \(error)")
         }
     }
 }
