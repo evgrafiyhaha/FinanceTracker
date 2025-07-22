@@ -2,9 +2,11 @@ import SwiftUI
 
 struct TransactionsListView: View {
     var direction: Direction
+    @EnvironmentObject var appState: AppState
     @StateObject var viewModel:TransactionsViewModel
     @State private var selectedTransaction: Transaction? = nil
     @State private var isCreatingTransaction = false
+
 
     init(direction: Direction) {
         self.direction = direction
@@ -29,7 +31,8 @@ struct TransactionsListView: View {
                             } label: {
                                 TransactionCell(
                                     transaction: transaction,
-                                    context: .today
+                                    context: .today,
+                                    currency: viewModel.bankAccount?.currency ?? .usd
                                 )
                                 .contentShape(Rectangle())
                                 .padding(4)
@@ -66,15 +69,23 @@ struct TransactionsListView: View {
             }
         }
         .fullScreenCover(item: $selectedTransaction) { transaction in
-            TransactionEditView(transaction, direction: direction)
+            TransactionEditView(transaction, direction: direction, onSave: {await viewModel.load()})
         }
         .fullScreenCover(isPresented: $isCreatingTransaction) {
-            TransactionEditView(nil, direction: direction)
+            TransactionEditView(nil, direction: direction, onSave: {await viewModel.load()})
         }
         .refreshable {
             await viewModel.load()
         }
-        .task { await viewModel.load() }
+        .withLoadingAndErrorOverlay(
+                isLoading: viewModel.isLoading,
+                error: viewModel.error,
+                onDismiss: { viewModel.error = nil }
+            )
+        .task {
+            viewModel.appState = appState
+            await viewModel.load()
+        }
     }
 }
 

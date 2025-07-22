@@ -1,74 +1,136 @@
 import Foundation
 
-enum TransactionsServiceError: Error {
-    case notFound
-    case alreadyExists
-}
-
 final class TransactionsService {
+
+    let client = NetworkClient(token: NetworkConstants.token)
+
+    @MainActor
+    private lazy var storage: TransactionsStorage = SwiftDataTransactionsStorage()
+
+    @MainActor
+    private lazy var backup: BackupStorage = SwiftDataBackupStorage()
+
+    private lazy var formatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
 
     static let shared = TransactionsService()
 
     private init() {}
 
-    // MARK: - Static Properties
-    static let categories: [Category] = [
-        Category(id: 0, name: "Зарплата", emoji: "💰", direction: .income),
-        Category(id: 1, name: "Аренда", emoji: "🏠", direction: .outcome),
-        Category(id: 2, name: "Ремонт", emoji: "🛠", direction: .outcome),
-        Category(id: 3, name: "Подработка", emoji: "👤", direction: .income)
-    ]
-    static let bankAccount: BankAccount = BankAccount(id: 0, userId: 0, name: "Основной счёт", balance: 1000.00, currency: .rub, createdAt: Date(), updatedAt: Date())
-
-    // MARK: - Private Properties
-    var transactions: [Transaction] = [
-        Transaction(id: 0, account: bankAccount, category: categories[0], amount: 77700.00, transactionDate: Date().addingTimeInterval(-86400), comment: nil, createdAt: Date(), updatedAt: Date()),
-        Transaction(id: 1, account: bankAccount, category: categories[1], amount: 8555.00, transactionDate: Date().addingTimeInterval(-86400), comment: "Арендодатель хочет кушать", createdAt: Date(), updatedAt: Date()),
-        Transaction(id: 2, account: bankAccount, category: categories[2], amount: 3933.00, transactionDate: Date(), comment: "Сломалось все", createdAt: Date(), updatedAt: Date()),
-        Transaction(id: 3, account: bankAccount, category: categories[0], amount: 777000.00, transactionDate: Calendar.current.date(byAdding: .month, value: -1, to: Date()) ?? Date(), comment: "пасхалка", createdAt: Date(), updatedAt: Date()),
-        Transaction(id: 4, account: bankAccount, category: categories[1], amount: 5595.00, transactionDate: Date(), comment: "Арендодатель хочет кушать", createdAt: Date(), updatedAt: Date()),
-        Transaction(id: 5, account: bankAccount, category: categories[2], amount: 3337.00, transactionDate: Date().addingTimeInterval(-86400), comment: "Сломалась плитка", createdAt: Date(), updatedAt: Date()),
-        Transaction(id: 6, account: bankAccount, category: categories[3], amount: 77700.00, transactionDate: Date(), comment: nil, createdAt: Date(), updatedAt: Date()),
-        Transaction(id: 7, account: bankAccount, category: categories[1], amount: 5855.00, transactionDate: Date(), comment: "Арендодатель хочет кушать", createdAt: Date(), updatedAt: Date()),
-        Transaction(id: 8, account: bankAccount, category: categories[2], amount: 520000.00, transactionDate: Date(), comment: "Сломался ковер", createdAt: Date(), updatedAt: Date()),
-        Transaction(id: 11, account: bankAccount, category: categories[3], amount: 7700.00, transactionDate: Date(), comment: nil, createdAt: Date(), updatedAt: Date()),
-        Transaction(id: 9, account: bankAccount, category: categories[1], amount: 5585.00, transactionDate: Date().addingTimeInterval(-86400), comment: nil, createdAt: Date(), updatedAt: Date()),
-        Transaction(id: 10, account: bankAccount, category: categories[2], amount: 3373.00, transactionDate: Date(), comment: "Сломалась плитка", createdAt: Date(), updatedAt: Date())
-    ]
-
     // MARK: - Public Methods
     func transactions(from: Date, to: Date) async throws -> [Transaction] {
-        return transactions.filter {
-            $0.transactionDate >= from && $0.transactionDate <= to
+        do {
+            try await syncBackupToServer()
+        } catch {
+            print("[TransactionsService.transactions] - Failed to sync backup: \(error)")
+        }
+
+        do {
+            let accountId = try await BankAccountsService.shared.bankAccount().id
+            guard var components = URLComponents(string: "\(NetworkConstants.transactionsUrl)/account/\(accountId)/period") else {
+                throw TransactionsServiceError.urlError
+            }
+
+            components.queryItems = [
+                URLQueryItem(name: "startDate", value: String(from.description.prefix(10))),
+                URLQueryItem(name: "endDate", value: String(to.description.prefix(10)))
+            ]
+
+            guard let url = components.url else {
+                throw NetworkError.invalidResponse
+            }
+
+            let transactions = try await client
+                .request(url: url, method: .get, responseType: [TransactionResponse].self)
+                .map { Transaction(response: $0, with: formatter) }
+
+            try await storage.sync(transactions: transactions)
+            return transactions.filter {
+                $0.transactionDate >= from && $0.transactionDate <= to
+            }
+
+        } catch {
+            print("[TransactionsService.transactions] - Fetch failed: \(error)")
+
+            let local = try await storage.transactions().filter {
+                $0.transactionDate >= from && $0.transactionDate <= to
+            }
+            throw TransactionsServiceError.networkFallback(local, error)
         }
     }
 
-    func transactions() async throws -> [Transaction] {
-        return transactions
-    }
+    func add(_ transaction: Transaction,localCopyId id: Int? = nil) async throws {
+        do {
+            guard let url = URL(string: NetworkConstants.transactionsUrl) else {
+                throw TransactionsServiceError.urlError
+            }
 
-    func add(_ transaction: Transaction) async throws {
-        guard !transactions.contains(where: { $0.id == transaction.id }) else {
-            print("[TransactionsService.add] - Транзакция с id \(transaction.id) уже существует")
-            throw TransactionsServiceError.alreadyExists
+            let short = try await client.request(url: url, method: .post, requestBody: TransactionRequest(from: transaction,with: formatter), responseType: TransactionShortResponse.self)
+            let local = short.updated(transaction: transaction, with: formatter)
+            if let id {
+                try await storage.delete(id: id)
+            }
+            try await storage.add(local)
+        } catch {
+            try await backup.add(transaction: transaction, transactionId: nil, for: .add)
         }
-        transactions.append(transaction)
     }
 
     func update(withId id: Int, with transaction: Transaction) async throws {
-        guard let index = transactions.firstIndex(where: { $0.id == id }) else {
-            print("[TransactionsService.update] - Транзакция с id \(id) не найдена")
-            throw TransactionsServiceError.notFound
+        do {
+            guard let url = URL(string: "\(NetworkConstants.transactionsUrl)/\(id)") else {
+                throw TransactionsServiceError.urlError
+            }
+
+            let updated = try await client.request(url: url, method: .put, requestBody: TransactionRequest(from: transaction,with: formatter), responseType: TransactionResponse.self)
+            try await storage.update(.init(response: updated, with: formatter))
+        } catch {
+            try await storage.update(transaction)
+            try await backup.add(transaction: transaction, transactionId: nil, for: .update)
         }
-        transactions[index] = transaction
     }
 
     func delete(withId id: Int) async throws {
-        guard let index = transactions.firstIndex(where: { $0.id == id }) else {
-            print("[TransactionsService.update] - Транзакция с id \(id) не найдена")
-            throw TransactionsServiceError.notFound
+        do {
+            guard let url = URL(string: "\(NetworkConstants.transactionsUrl)/\(id)") else {
+                throw TransactionsServiceError.urlError
+            }
+
+            let _ = try await client.request(url: url, method: .delete)
+            try await storage.delete(id: id)
+        } catch {
+            try await storage.delete(id: id)
+            try await backup.add(transaction: nil, transactionId: id, for: .delete)
         }
-        transactions.remove(at: index)
+    }
+
+    func syncBackupToServer() async throws {
+        let pendingTransactions = try await backup.pendingTransactions()
+        var syncedIDs: [Int] = []
+        print(pendingTransactions)
+        for pending in pendingTransactions {
+            do {
+                switch pending.operation {
+                case .add:
+                    guard let transaction = pending.transaction else { break }
+                    try await add(transaction,localCopyId: transaction.id)
+                case .update:
+                    guard let transaction = pending.transaction else { break }
+                    try await update(withId: transaction.id, with: transaction)
+                case .delete:
+                    try await delete(withId: pending.transactionId)
+                }
+                syncedIDs.append(pending.id)
+            } catch {
+                print("[TransactionsService.syncBackupToServer] - Failed to sync pending transaction with id \(pending.id): \(error)")
+            }
+        }
+
+        for id in syncedIDs {
+            try await backup.delete(id: id)
+        }
     }
 }
-

@@ -1,69 +1,72 @@
 import Foundation
 
-enum BankAccountsServiceError: Error {
-    case notFound
-}
-
 final class BankAccountsService {
+
+    let client = NetworkClient(token: NetworkConstants.token)
+
+    @MainActor
+    private lazy var storage: BankAccountStorage = SwiftDataBankAccountStorage()
+
+    @MainActor
+    private lazy var backup: BackupStorage = SwiftDataBackupStorage()
+
+    private lazy var formatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [
+            .withInternetDateTime,
+            .withFractionalSeconds
+        ]
+        return formatter
+    }()
 
     static let shared = BankAccountsService()
 
     private init() {}
 
-    // MARK: - Private Properties
-    private var allAccounts: [BankAccount] = [
-        BankAccount(id: 0, userId: 0, name: "Основной счёт", balance: 1000.00, currency: .rub, createdAt: Date(), updatedAt: Date()),
-        BankAccount(id: 1, userId: 0, name: "Запасной счёт", balance: 52.00, currency: .rub, createdAt: Date(), updatedAt: Date())
-    ]
-
     // MARK: - Public Methods
     func bankAccount() async throws -> BankAccount {
-        guard let first = allAccounts.first else {
-            print("[BankAccountsService.bankAccount] - Не удалось найти ни одного банковского счёта")
-            throw BankAccountsServiceError.notFound
+        do {
+            guard let url = URL(string: NetworkConstants.accountsUrl)
+            else {
+                throw BankAccountsServiceError.urlError
+            }
+            let accounts = try await client.request(url: url, method: .get, responseType: [BankAccountResponse].self)
+            guard let first = accounts.first else {
+                throw BankAccountsServiceError.notFound
+            }
+
+            let account = BankAccount(response: first, with: formatter)
+            return account
+        } catch {
+            print("[BankAccountsService.bankAccount] - Fetch failed: \(error)")
+            let local = try await storage.account()
+            throw BankAccountsServiceError.networkFallback(local, error)
         }
-        return first
     }
 
-    func update(with account: BankAccount) async throws {
-        guard allAccounts.count > 0 else {
-            print("[BankAccountsService.updateBalance] - Не удалось найти банковский счёт для обновления")
-            throw BankAccountsServiceError.notFound
-        }
-        allAccounts[0] = account
-    }
-
-    func updateBalance(withValue value: Decimal) async throws {
-        guard let first = allAccounts.first else {
-            print("[BankAccountsService.updateBalance] - Не удалось найти банковский счёт для обновления")
-            throw BankAccountsServiceError.notFound
-        }
+    func updateBalance(old account: BankAccount, with value: Decimal, for currency: Currency) async throws {
         let updatedAccount = BankAccount(
-            id: first.id,
-            userId: first.userId,
-            name: first.name,
+            id: account.id,
+            userId: account.userId,
+            name: account.name,
             balance: value,
-            currency: first.currency,
-            createdAt: first.createdAt,
+            currency: currency,
+            createdAt: account.createdAt,
             updatedAt: Date()
         )
-        allAccounts[0] = updatedAccount
+        try await update(with: updatedAccount)
     }
 
-    func updateCurrency(withValue currency: Currency) async throws {
-        guard let first = allAccounts.first else {
-            print("[BankAccountsService.updateBalance] - Не удалось найти банковский счёт для обновления")
-            throw BankAccountsServiceError.notFound
+    // MARK: - Private Methods
+    private func update(with account: BankAccount) async throws {
+        guard let url = URL(string: "\(NetworkConstants.accountsUrl)/\(account.id)") else {
+            throw BankAccountsServiceError.urlError
         }
-        let updatedAccount = BankAccount(
-            id: first.id,
-            userId: first.userId,
-            name: first.name,
-            balance: first.balance,
-            currency: currency,
-            createdAt: first.createdAt,
-            updatedAt: Date()
+        let _ = try await client.request(
+            url: url,
+            method: .put,
+            requestBody: BankAccountRequest(from: account),
+            responseType: BankAccountResponse.self
         )
-        allAccounts[0] = updatedAccount
     }
 }

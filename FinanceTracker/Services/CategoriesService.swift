@@ -1,23 +1,44 @@
+import Foundation
+
 final class CategoriesService {
 
-    // MARK: - Private Properties
-    private let allCategories: [Category] = [
-        Category(id: 0, name: "Зарплата", emoji: "💰", direction: .income),
-        Category(id: 1, name: "Аренда", emoji: "🏠", direction: .outcome),
-        Category(id: 2, name: "Ремонт", emoji: "🛠", direction: .outcome),
-        Category(id: 7, name: "На собачку", emoji: "🐕", direction: .outcome),
-        Category(id: 4, name: "Одежда", emoji: "👔", direction: .outcome),
-        Category(id: 5, name: "Спортзал", emoji: "🏋️‍♂️", direction: .outcome),
-        Category(id: 6, name: "Машина", emoji: "🚗", direction: .outcome),
-        Category(id: 3, name: "Подработка", emoji: "👤", direction: .income)
-    ]
+    private let client = NetworkClient(token: NetworkConstants.token)
+
+    @MainActor
+    private lazy var storage: CategoriesStorage = SwiftDataCategoriesStorage()
+
+    @MainActor
+    private lazy var backup: BackupStorage = SwiftDataBackupStorage()
 
     // MARK: - Public Methods
     func categories() async throws -> [Category] {
-        return allCategories
+        do {
+            guard let categoriesURL = URL(string: NetworkConstants.categoriesUrl) else {
+                throw CategoriesServiceError.urlError
+            }
+            let categs = try await client.request(url: categoriesURL, method: .get, responseType: [CategoryResponse].self)
+                .map( { Category(response: $0) } )
+            try await storage.sync(categories: categs)
+            return categs
+        } catch {
+            print("[CategoriesService.categories] - Fetch failed: \(error)")
+            let local = try await storage.categories()
+            throw CategoriesServiceError.networkFallback(local, error)
+        }
     }
 
     func categories(withDirection direction: Direction) async throws -> [Category] {
-        return allCategories.filter { $0.direction == direction }
+        do {
+            let all = try await categories()
+            return all.filter { $0.direction == direction }
+        } catch CategoriesServiceError.networkFallback(let local, let error) {
+            let filtered = local.filter { $0.direction == direction }
+            throw CategoriesServiceError.networkFallback(filtered, error)
+        } catch {
+            print("[CategoriesService.categories(withDirection)] - Fallback: \(error)")
+            let local = try await storage.categories()
+            let filtered = local.filter { $0.direction == direction }
+            throw CategoriesServiceError.networkFallback(filtered, error)
+        }
     }
 }

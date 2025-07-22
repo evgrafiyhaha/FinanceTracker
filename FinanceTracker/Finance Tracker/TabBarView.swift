@@ -1,40 +1,53 @@
 import SwiftUI
 
 struct TabBarView: View {
+    @EnvironmentObject var appState: AppState
 
     var body: some View {
-        TabView {
-            TransactionsListView(direction: .outcome)
-                .tabItem {
-                    Image("downtrend").renderingMode(.template)
-                    Text("Расходы")
-                }
+        VStack(spacing: 0) { // убираем отступы между элементами
+            if appState.isOffline {
+                Text("Offline mode")
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(8)
+                    .background(Color.red)
+                    .transition(.move(edge: .top))
+            }
 
-            TransactionsListView(direction: .income)
-                .tabItem {
-                    Image("uptrend").renderingMode(.template)
-                    Text("Доходы")
-                }
+            TabView {
+                TransactionsListView(direction: .outcome)
+                    .tabItem {
+                        Image("downtrend").renderingMode(.template)
+                        Text("Расходы")
+                    }
 
-            AccountView()
-                .tabItem {
-                    Image("calculator").renderingMode(.template)
-                    Text("Счет")
-                }
+                TransactionsListView(direction: .income)
+                    .tabItem {
+                        Image("uptrend").renderingMode(.template)
+                        Text("Доходы")
+                    }
 
-            CategoriesView()
-                .tabItem {
-                    Image("categories").renderingMode(.template)
-                    Text("Статьи")
-                }
+                AccountView()
+                    .tabItem {
+                        Image("calculator").renderingMode(.template)
+                        Text("Счет")
+                    }
 
-            SettingsView()
-                .tabItem {
-                    Image("settings").renderingMode(.template)
-                    Text("Настройки")
-                }
+                CategoriesView()
+                    .tabItem {
+                        Image("categories").renderingMode(.template)
+                        Text("Статьи")
+                    }
+
+                SettingsView()
+                    .tabItem {
+                        Image("settings").renderingMode(.template)
+                        Text("Настройки")
+                    }
+            }
+            .frame(maxHeight: .infinity)  // вот ключ — заставляем TabView занять оставшееся место
         }
-
+        .animation(.easeInOut, value: appState.isOffline)
     }
 }
 

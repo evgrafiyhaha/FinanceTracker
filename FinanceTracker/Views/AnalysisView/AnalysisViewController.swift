@@ -15,6 +15,9 @@ enum CellType {
 protocol AnalysisViewProtocol: AnyObject {
     func reloadTransactionTableView()
     func reloadPickerTableView()
+    func showLoader()
+    func hideLoader()
+    func showError(_ message: String)
 }
 
 final class AnalysisViewController: UIViewController {
@@ -31,6 +34,13 @@ final class AnalysisViewController: UIViewController {
     private let scrollView = UIScrollView()
     private let contentView = UIView()
     private var diagramView = UIView()
+
+    private var loader: UIActivityIndicatorView = {
+        let indicator = UIActivityIndicatorView(style: .large)
+        indicator.hidesWhenStopped = true
+        indicator.color = .gray
+        return indicator
+    }()
 
     private lazy var tableTitleLabel: UILabel = {
         let label = UILabel()
@@ -90,6 +100,7 @@ final class AnalysisViewController: UIViewController {
         contentView.addSubview(diagramView)
         contentView.addSubview(tableTitleLabel)
         contentView.addSubview(transactionTableView)
+        view.addSubview(loader)
 
         diagramView.backgroundColor = .ftLightGreen
     }
@@ -101,6 +112,7 @@ final class AnalysisViewController: UIViewController {
         diagramView.translatesAutoresizingMaskIntoConstraints = false
         tableTitleLabel.translatesAutoresizingMaskIntoConstraints = false
         transactionTableView.translatesAutoresizingMaskIntoConstraints = false
+        loader.translatesAutoresizingMaskIntoConstraints = false
 
         tableHeightConstraint = transactionTableView.heightAnchor.constraint(equalToConstant: CGFloat(presenter.transactions.count) * 60)
         tableHeightConstraint?.isActive = true
@@ -132,7 +144,10 @@ final class AnalysisViewController: UIViewController {
             transactionTableView.topAnchor.constraint(equalTo: tableTitleLabel.bottomAnchor, constant: 8),
             transactionTableView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
             transactionTableView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
-            transactionTableView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -16)
+            transactionTableView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -16),
+
+            loader.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            loader.centerYAnchor.constraint(equalTo: view.centerYAnchor)
         ])
     }
 
@@ -229,7 +244,14 @@ extension AnalysisViewController: UITableViewDataSource, UITableViewDelegate {
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         guard tableView == transactionTableView else { return }
         let transaction = presenter.transactions[indexPath.row]
-        let swiftUIView = TransactionEditView(transaction, direction: presenter.direction)
+        let swiftUIView = TransactionEditView(
+            transaction,
+            direction: presenter.direction,
+            onSave: { [weak self] in
+                self?.transactionTableView.reloadData()
+                self?.pickerTableView.reloadData()
+
+            })
         let hostingController = UIHostingController(rootView: swiftUIView)
         hostingController.modalPresentationStyle = .fullScreen
         present(hostingController,animated:true)
@@ -238,6 +260,22 @@ extension AnalysisViewController: UITableViewDataSource, UITableViewDelegate {
 
 // MARK: - AnalysisViewProtocol
 extension AnalysisViewController: AnalysisViewProtocol {
+    func showLoader() {
+        loader.startAnimating()
+        view.isUserInteractionEnabled = false
+    }
+
+    func hideLoader() {
+        loader.stopAnimating()
+        view.isUserInteractionEnabled = true
+    }
+
+    func showError(_ message: String) {
+        let alert = UIAlertController(title: "Ошибка", message: message, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "ОК", style: .default))
+        present(alert, animated: true)
+    }
+
     func reloadTransactionTableView() {
         transactionTableView.reloadData()
         tableHeightConstraint?.constant = CGFloat(presenter.transactions.count) * 60

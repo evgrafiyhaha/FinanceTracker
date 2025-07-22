@@ -24,6 +24,8 @@ final class TransactionHistoryViewModel: ObservableObject {
     @Published private(set) var transactions: [Transaction] = []
     @Published private(set) var sum: Decimal = 0
     @Published private(set) var bankAccount: BankAccount?
+    @Published var isLoading: Bool = false
+    @Published var error: String? = nil
 
     @Published var sortingType: SortingType = .none
     @Published var startDate: Date = Calendar.current.date(byAdding: .month, value: -1, to: Date()) ?? Date() {
@@ -41,6 +43,8 @@ final class TransactionHistoryViewModel: ObservableObject {
         }
     }
 
+    weak var appState: AppState?
+
     // MARK: - Private Properties
     private let direction: Direction
     private let transactionsService = TransactionsService.shared
@@ -53,40 +57,12 @@ final class TransactionHistoryViewModel: ObservableObject {
     }
 
     // MARK: - Public Methods
-    func fetchTransactions() async {
-        guard !Task.isCancelled else { return }
-        
-        let calendar = Calendar.current
-        let startOfDay = calendar.startOfDay(for: startDate)
-        guard let endOfDay = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: endDate) else {
-            return
-        }
-        do {
-            let all = try await transactionsService.transactions(from: startOfDay, to: endOfDay)
-            let filtered = all.filter { $0.category.direction == direction }
-
-            await MainActor.run {
-                self.transactions = filtered
-                self.applySort()
-                self.recalculateSum()
-            }
-        } catch {
-            print("[TransactionHistoryViewModel.fetchTransactions] - Ошибка загрузки транзакций: \(error)")
-        }
-    }
-
     func load() async {
+        await MainActor.run { isLoading = true; error = nil }
+        defer { Task { @MainActor in isLoading = false } }
+
         await fetchTransactions()
-        do {
-            let account = try await accountService.bankAccount()
-            await MainActor.run {
-                self.bankAccount = account
-                self.recalculateSum()
-            }
-        }
-        catch {
-            print("[TransactionHistoryViewModel.load] - Ошибка загрузки счета: \(error)")
-        }
+        await fetchAccount()
     }
 
     func applySort() {
@@ -110,5 +86,63 @@ final class TransactionHistoryViewModel: ObservableObject {
     // MARK: - Private Methods
     private func recalculateSum() {
         sum = transactions.reduce(0) { $0 + $1.amount }
+    }
+
+    private func fetchAccount() async {
+        do {
+            let account = try await accountService.bankAccount()
+            await MainActor.run {
+                self.appState?.isOffline = false
+                self.bankAccount = account
+                self.recalculateSum()
+            }
+        } catch {
+            handleError(error, context: "TransactionHistoryViewModel.fetchAccount")
+        }
+    }
+
+    private func fetchTransactions() async {
+        guard !Task.isCancelled else { return }
+
+        let calendar = Calendar.current
+        let startOfDay = calendar.startOfDay(for: startDate)
+        guard let endOfDay = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: endDate) else {
+            return
+        }
+        do {
+            let all = try await transactionsService.transactions(from: startOfDay, to: endOfDay)
+            let filtered = all.filter { $0.category.direction == direction }
+
+            await MainActor.run {
+                self.appState?.isOffline = false
+                self.transactions = filtered
+                self.applySort()
+                self.recalculateSum()
+            }
+        } catch {
+            handleError(error, context: "TransactionHistoryViewModel.fetchTransactions")
+        }
+    }
+    
+    private func handleError(_ error: Error, context: String) {
+        Task { @MainActor in
+            var description = ""
+            self.appState?.isOffline = true
+            switch error {
+            case TransactionsServiceError.networkFallback(let transactions, let nestedError):
+                self.transactions = transactions
+                self.applySort()
+                self.recalculateSum()
+                description = (nestedError as? LocalizedError)?.errorDescription ?? "Ошибка сети: данные могут быть неактуальными"
+            case BankAccountsServiceError.networkFallback(let account, let nestedError):
+                self.bankAccount = account
+                self.recalculateSum()
+                description = (nestedError as? LocalizedError)?.errorDescription ?? "Ошибка сети: данные могут быть неактуальными"
+            default:
+                description = (error as? LocalizedError)?.errorDescription ?? "Неизвестная ошибка"
+            }
+            self.error = description
+            print("[\(context)] - Ошибка: \(error)")
+        }
     }
 }

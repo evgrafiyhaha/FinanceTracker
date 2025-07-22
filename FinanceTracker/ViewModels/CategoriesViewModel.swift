@@ -5,8 +5,11 @@ final class CategoriesViewModel: ObservableObject {
     // MARK: - @Published
     @Published private(set) var categories: [Category] = []
     @Published var searchText: String = ""
+    @Published var isLoading: Bool = false
+    @Published var error: String? = nil
 
     // MARK: - Public Properties
+    weak var appState: AppState?
     var filteredCategories: [Category] {
         guard !searchText.isEmpty else { return categories }
 
@@ -37,14 +40,17 @@ final class CategoriesViewModel: ObservableObject {
 
     // MARK: - Public Methods
     func fetchCategories() async {
+        await MainActor.run { isLoading = true; error = nil }
+        defer { Task { @MainActor in isLoading = false } }
+
         do {
             let categories = try await categoriesService.categories()
             await MainActor.run {
+                self.appState?.isOffline = false
                 self.categories = categories
             }
-        }
-        catch {
-            print("[CategoriesViewModel.fetchCategories] - Ошибка загрузки статей: \(error)")
+        } catch {
+            handleError(error, context: "CategoriesViewModel.fetchCategories")
         }
     }
 
@@ -71,5 +77,21 @@ final class CategoriesViewModel: ObservableObject {
             }
         }
         return dist[a.count][b.count]
+    }
+
+    private func handleError(_ error: Error, context: String) {
+        Task { @MainActor in
+            var description = ""
+            self.appState?.isOffline = true
+            switch error {
+            case CategoriesServiceError.networkFallback(let categories, let nestedError):
+                self.categories = categories
+                description = (nestedError as? LocalizedError)?.errorDescription ?? "Ошибка сети: данные могут быть неактуальными"
+            default:
+                description = (error as? LocalizedError)?.errorDescription ?? "Неизвестная ошибка"
+            }
+            self.error = description
+            print("[\(context)] - Ошибка: \(error)")
+        }
     }
 }
