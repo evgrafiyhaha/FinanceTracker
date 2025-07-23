@@ -3,8 +3,11 @@ import Foundation
 
 @MainActor
 final class SwiftDataBackupStorage: BackupStorage {
+
+    // MARK: - Private Properties
     private let context: ModelContext = SwiftDataStorage.shared.context
 
+    // MARK: - Public Methods
     func pendingTransactions() async throws -> [PendingTransaction] {
         try context.fetch(FetchDescriptor<PendingTransactionModel>())
             .map { $0.toDomain() }
@@ -41,6 +44,7 @@ final class SwiftDataBackupStorage: BackupStorage {
         try context.save()
     }
 
+    // MARK: - Private Methods
     private func nextId() throws -> Int {
         let existing = try context.fetch(FetchDescriptor<PendingTransactionModel>())
         return (existing.map { $0.id }.max() ?? 0) + 1

@@ -4,7 +4,7 @@ struct TabBarView: View {
     @EnvironmentObject var appState: AppState
 
     var body: some View {
-        VStack(spacing: 0) { // убираем отступы между элементами
+        VStack(spacing: 0) {
             if appState.isOffline {
                 Text("Offline mode")
                     .foregroundColor(.white)
@@ -45,7 +45,7 @@ struct TabBarView: View {
                         Text("Настройки")
                     }
             }
-            .frame(maxHeight: .infinity)  // вот ключ — заставляем TabView занять оставшееся место
+            .frame(maxHeight: .infinity)
         }
         .animation(.easeInOut, value: appState.isOffline)
     }

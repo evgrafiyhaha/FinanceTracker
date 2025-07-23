@@ -77,7 +77,7 @@ final class TransactionsViewModel: ObservableObject {
             switch error {
             case TransactionsServiceError.networkFallback(let transactions, let nestedError):
                 self.appState?.isOffline = true
-                self.transactions = transactions
+                self.transactions = transactions.filter { $0.category.direction == direction }
                 self.recalculateSum()
                 description = (nestedError as? LocalizedError)?.errorDescription ?? "Ошибка сети: данные могут быть неактуальными"
             case BankAccountsServiceError.networkFallback(let account, let nestedError):

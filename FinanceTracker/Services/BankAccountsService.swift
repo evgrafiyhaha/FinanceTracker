@@ -36,6 +36,7 @@ final class BankAccountsService {
             }
 
             let account = BankAccount(response: first, with: formatter)
+            try await storage.sync(account:account)
             return account
         } catch {
             print("[BankAccountsService.bankAccount] - Fetch failed: \(error)")

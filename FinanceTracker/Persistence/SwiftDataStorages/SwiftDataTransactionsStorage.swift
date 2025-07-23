@@ -3,9 +3,11 @@ import Foundation
 
 @MainActor
 final class SwiftDataTransactionsStorage: TransactionsStorage {
-    
+
+    // MARK: - Private Properties
     private let context: ModelContext = SwiftDataStorage.shared.context
 
+    // MARK: - Public Methods
     func sync(transactions: [Transaction]) async throws {
         for transaction in transactions {
             try await add(transaction)
