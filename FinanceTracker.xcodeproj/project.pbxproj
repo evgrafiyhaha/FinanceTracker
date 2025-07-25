@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		F66265822E33CD9D005A4EE4 /* PieChart in Frameworks */ = {isa = PBXBuildFile; productRef = F66265812E33CD9D005A4EE4 /* PieChart */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		F6BA8B0B2DF4936500E4BFF3 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -52,6 +56,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F66265822E33CD9D005A4EE4 /* PieChart in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -112,6 +117,7 @@
 			);
 			name = FinanceTracker;
 			packageProductDependencies = (
+				F66265812E33CD9D005A4EE4 /* PieChart */,
 			);
 			productName = FinanceTracker;
 			productReference = F6BA8AFA2DF4936400E4BFF3 /* FinanceTracker.app */;
@@ -196,6 +202,7 @@
 			mainGroup = F6BA8AF12DF4936400E4BFF3;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
+				F66264342E33216B005A4EE4 /* XCLocalSwiftPackageReference "Utilities" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = F6BA8AFB2DF4936400E4BFF3 /* Products */;
@@ -560,6 +567,20 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		F66264342E33216B005A4EE4 /* XCLocalSwiftPackageReference "Utilities" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Utilities;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		F66265812E33CD9D005A4EE4 /* PieChart */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PieChart;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = F6BA8AF22DF4936400E4BFF3 /* Project object */;
 }
