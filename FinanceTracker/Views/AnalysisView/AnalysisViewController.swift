@@ -1,5 +1,6 @@
 import UIKit
 import SwiftUI
+import PieChart
 
 enum DatePickerType: String {
     case start = "Период: начало"
@@ -15,6 +16,7 @@ enum CellType {
 protocol AnalysisViewProtocol: AnyObject {
     func reloadTransactionTableView()
     func reloadPickerTableView()
+    func reloadDiagram(with entities: [Entity])
     func showLoader()
     func hideLoader()
     func showError(_ message: String)
@@ -34,6 +36,7 @@ final class AnalysisViewController: UIViewController {
     private let scrollView = UIScrollView()
     private let contentView = UIView()
     private var diagramView = UIView()
+    private var pieChartView = PieChartView()
 
     private var loader: UIActivityIndicatorView = {
         let indicator = UIActivityIndicatorView(style: .large)
@@ -101,8 +104,7 @@ final class AnalysisViewController: UIViewController {
         contentView.addSubview(tableTitleLabel)
         contentView.addSubview(transactionTableView)
         view.addSubview(loader)
-
-        diagramView.backgroundColor = .ftLightGreen
+        diagramView.addSubview(pieChartView)
     }
 
     private func setupConstraints() {
@@ -113,6 +115,7 @@ final class AnalysisViewController: UIViewController {
         tableTitleLabel.translatesAutoresizingMaskIntoConstraints = false
         transactionTableView.translatesAutoresizingMaskIntoConstraints = false
         loader.translatesAutoresizingMaskIntoConstraints = false
+        pieChartView.translatesAutoresizingMaskIntoConstraints = false
 
         tableHeightConstraint = transactionTableView.heightAnchor.constraint(equalToConstant: CGFloat(presenter.transactions.count) * 60)
         tableHeightConstraint?.isActive = true
@@ -138,6 +141,11 @@ final class AnalysisViewController: UIViewController {
             diagramView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             diagramView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
             diagramView.heightAnchor.constraint(equalToConstant: 185),
+            pieChartView.widthAnchor.constraint(equalToConstant: 150),
+            pieChartView.heightAnchor.constraint(equalToConstant: 145),
+            pieChartView.centerXAnchor.constraint(equalTo: diagramView.centerXAnchor),
+            pieChartView.centerYAnchor.constraint(equalTo: diagramView.centerYAnchor),
+
             tableTitleLabel.topAnchor.constraint(equalTo: diagramView.bottomAnchor, constant: 8),
             tableTitleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
 
@@ -260,6 +268,10 @@ extension AnalysisViewController: UITableViewDataSource, UITableViewDelegate {
 
 // MARK: - AnalysisViewProtocol
 extension AnalysisViewController: AnalysisViewProtocol {
+    func reloadDiagram(with entities: [Entity]) {
+        pieChartView.setEntities(entities, animated: true)
+    }
+    
     func showLoader() {
         loader.startAnimating()
         view.isUserInteractionEnabled = false

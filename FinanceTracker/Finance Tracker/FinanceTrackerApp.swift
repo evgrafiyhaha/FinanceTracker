@@ -1,4 +1,5 @@
 import SwiftUI
+import Lottie
 
 @main
 struct FinanceTrackerApp: App {
@@ -6,8 +7,13 @@ struct FinanceTrackerApp: App {
 
     var body: some Scene {
         WindowGroup {
-            TabBarView()
-                .environmentObject(appState)
+            if appState.didShowLaunchAnimation {
+                TabBarView()
+                    .environmentObject(appState)
+            } else {
+                LaunchAnimationScreen()
+                    .environmentObject(appState)
+            }
         }
     }
 }

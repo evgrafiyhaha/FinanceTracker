@@ -1,4 +1,5 @@
 import Foundation
+import PieChart
 
 protocol AnalysisPresenterProtocol: AnyObject {
     var view: AnalysisViewProtocol? { get set }
@@ -58,11 +59,13 @@ final class AnalysisPresenter: AnalysisPresenterProtocol {
             do {
                 try await fetchTransactions()
             } catch let TransactionsServiceError.networkFallback(transactions, nestedError) {
-                self.transactions = transactions
+                self.transactions = transactions.filter { $0.category.direction == direction }
                 self.recalculateSum()
+                let entities = splitIntoEntities()
                 await MainActor.run {
                     self.view?.reloadTransactionTableView()
                     self.view?.reloadPickerTableView()
+                    self.view?.reloadDiagram(with: entities)
                 }
                 errorDescription = (nestedError as? LocalizedError)?.errorDescription ?? "Ошибка сети при загрузке операций. Данные могут быть неактуальны."
             } catch {
@@ -108,13 +111,14 @@ final class AnalysisPresenter: AnalysisPresenterProtocol {
 
         let all = try await transactionsService.transactions(from: startOfDay, to: endOfDay)
         let filtered = all.filter { $0.category.direction == direction }
-
+        self.transactions = filtered
+        self.applySort()
+        self.recalculateSum()
+        let entities = splitIntoEntities()
         await MainActor.run {
-            self.transactions = filtered
-            self.applySort()
-            self.recalculateSum()
             self.view?.reloadTransactionTableView()
             self.view?.reloadPickerTableView()
+            self.view?.reloadDiagram(with: entities)
         }
     }
 
@@ -131,5 +135,39 @@ final class AnalysisPresenter: AnalysisPresenterProtocol {
         case .none:
             return
         }
+    }
+    private func splitIntoEntities() -> [Entity] {
+        let grouped = Dictionary(grouping: transactions) { $0.category.name }
+
+        var categorySums: [(name: String, sum: Decimal)] = grouped.map { key, transactions in
+            let total = transactions.reduce(Decimal(0)) { $0 + $1.amount }
+            return (name: key, sum: total)
+        }
+
+        categorySums.sort { $0.sum > $1.sum }
+
+        let totalSum = NSDecimalNumber(decimal: sum)
+
+        var result: [Entity] = []
+
+        for (index, category) in categorySums.enumerated() {
+            let valueDecimal = NSDecimalNumber(decimal: category.sum)
+            let percentDecimal = valueDecimal.multiplying(by: 100).dividing(by: totalSum)
+            let percent = percentDecimal.rounding(accordingToBehavior: nil).intValue
+
+            if index < 5 {
+                result.append(Entity(value: Decimal(percent), label: category.name))
+            } else {
+                if let othersIndex = result.firstIndex(where: { $0.label == "Остальные" }) {
+                    let previous = result[othersIndex]
+                    let newValue = previous.value + Decimal(percent)
+                    result[othersIndex] = Entity(value: newValue, label: "Остальные")
+                } else {
+                    result.append(Entity(value: Decimal(percent), label: "Остальные"))
+                }
+            }
+        }
+
+        return result
     }
 }
